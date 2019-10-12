@@ -105,7 +105,7 @@ func (g GoTagger) Run() int {
 		v = latest.IncPatch()
 	}
 
-	if doRelease(commits[0]) {
+	if len(commits) > 0 && doRelease(commits[0]) {
 		head := commits[0]
 		if err := r.CreateTag(head.Hash, &v, "", false, true); err != nil {
 			errLogger.Printf("error: could not tag HEAD (%s): %s", head.Hash, err)

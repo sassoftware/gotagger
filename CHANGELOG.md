@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with `refs/tags/`
 - Remove unnecessary quotes from `git tag` format. These were being included in the
   formatted string.
+- Address a bug in the cli where we tried to do a release when HEAD is already tagged.
 
 ## [0.1.0] - 2019/10/11
 
