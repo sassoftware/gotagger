@@ -91,14 +91,11 @@ func (r Repo) CreateTag(commit string, v *semver.Version, message string, signed
 	args := []string{"tag"}
 	if signed {
 		args = append(args, "-s")
-		if message == "" {
-			message = "Release " + vStr
-		}
 	}
-	if message != "" {
-		args = append(args, "-m", message)
+	if message == "" {
+		message = "Release " + vStr
 	}
-	args = append(args, vStr)
+	args = append(args, "-m", message, "--", vStr)
 	_, err := r.run(args)
 	return err
 }
