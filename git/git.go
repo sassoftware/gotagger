@@ -128,7 +128,7 @@ func (r Repo) Tags() ([]Commit, error) {
 	args := []string{
 		"tag",
 		"--list",
-		"--format='%(if)%(*objectname)%(then)%(*objectname)%(else)%(objectname)%(end)%00%00%00%00%(refname)'",
+		"--format=%(if)%(*objectname)%(then)%(*objectname)%(else)%(objectname)%(end)%00%00%00%00%(refname)",
 	}
 	out, err := r.run(args)
 	if err != nil {

@@ -197,4 +197,12 @@ func TestTags(t *testing.T) {
 	if commit.Body != "" {
 		t.Errorf("tag commit has body")
 	}
+	if len(commit.Tags) != 1 {
+		t.Errorf("want 1 tag, got %d", len(commit.Tags))
+	}
+	want := semver.MustParse("v1.0.0")
+	got := commit.Tags[0]
+	if !want.Equal(got) {
+		t.Errorf("want %s, got %s", want, got)
+	}
 }
