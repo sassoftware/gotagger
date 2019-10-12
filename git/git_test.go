@@ -73,7 +73,7 @@ func Test_getGitDirectoryNoGit(t *testing.T) {
 }
 
 func Test_parseCommits(t *testing.T) {
-	commit := []byte("hash\x00This is a subject\x00And this is a body\nthat is across several\nlines\x00Trailer-One: value one,TrailerTwo: value two\x00")
+	commit := []byte("hash\x00This is a subject\x00And this is a body\nthat is across several\nlines\x00Trailer-One: value one|TrailerTwo: value two\x00")
 	want := Commit{
 		Hash:     "hash",
 		Subject:  "This is a subject",

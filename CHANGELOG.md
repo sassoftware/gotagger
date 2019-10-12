@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Fixed
 - Always create annotated tags, otherwise we can't find our own tags.
+- Call `git log` with the `--decorate=full` option, so that tags are properly prefixed
+  with `refs/tags/`
 
 ## [0.1.0] - 2019/10/11
 ### Added

@@ -107,7 +107,7 @@ func (r Repo) Head() (Commit, error) {
 
 // RevList returns a slice of commits from start to end.
 func (r Repo) RevList(start, end string) ([]Commit, error) {
-	args := []string{"log", "--format=%H%x00%s%x00%b%x00%(trailers:only=yes,separator=%x2c,unfold=yes)%x00%d%x00%x00", start}
+	args := []string{"log", "--decorate=full", "--format=%H%x00%s%x00%b%x00%(trailers:only,unfold,separator=|)%x00%d%x00%x00", start}
 	if end != "" {
 		args = append(args, "^"+end)
 	}
@@ -150,7 +150,7 @@ func parseCommits(lines [][]byte) []Commit {
 			Hash:     string(line[0]),
 			Subject:  string(line[1]),
 			Body:     string(line[2]),
-			Trailers: strings.Split(string(line[3]), ","),
+			Trailers: strings.Split(string(line[3]), "|"),
 			Tags:     parseTags(string(line[4])),
 		}
 	}
