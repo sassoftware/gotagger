@@ -94,42 +94,58 @@ func (g GoTagger) Run() int {
 		errLogger.Printf("error: could not fetch commits HEAD..%s: %s", commitHash, err)
 		return genericErrorExitCode
 	}
-	v := *latest
+
+	// If HEAD is already tagged, just display the latest version
+	if len(commits) == 0 {
+		outLogger.Println(latest)
+		return successExitCode
+	}
+
 	changeType, isBreaking := scanForMarkers(commits)
 	switch {
 	case isBreaking:
-		v = latest.IncMajor()
+		*latest = latest.IncMajor()
 	case changeType == marker.Feature:
-		v = latest.IncMinor()
+		*latest = latest.IncMinor()
 	case changeType == marker.Fix:
-		v = latest.IncPatch()
+		*latest = latest.IncPatch()
 	}
-
-	if len(commits) > 0 && doRelease(commits[0]) {
+	if len(commits) > 0 {
 		head := commits[0]
-		if err := r.CreateTag(head.Hash, &v, "", false, true); err != nil {
-			errLogger.Printf("error: could not tag HEAD (%s): %s", head.Hash, err)
-			return genericErrorExitCode
+		if isRelease(head) && !alreadyTagged(latest, head) {
+			if err := r.CreateTag(head.Hash, latest, "", false, true); err != nil {
+				errLogger.Printf("error: could not tag HEAD (%s): %s", head.Hash, err)
+				return genericErrorExitCode
+			}
 		}
 	}
-	outLogger.Println(v)
+	outLogger.Println(latest)
 	return successExitCode
 }
 
-func doRelease(c git.Commit) bool {
+func alreadyTagged(v *semver.Version, c git.Commit) bool {
+	for _, t := range c.Tags {
+		if v.Equal(t) {
+			return true
+		}
+	}
+	return false
+}
+
+func isRelease(c git.Commit) bool {
 	m, _, _ := marker.Parse(c.Subject)
 	return m == marker.Release
 }
 
 func getLatest(r git.Repo) (latest *semver.Version, hash string, err error) {
-	latest = new(semver.Version)
 	taggedCommits, err := r.Tags()
 	if err != nil {
 		return latest, hash, err
 	}
+	latest = new(semver.Version)
 	for _, commit := range taggedCommits {
 		if len(commit.Tags) > 0 {
-			if latest != nil && latest.LessThan(commit.Tags[0]) {
+			if latest.LessThan(commit.Tags[0]) {
 				latest = commit.Tags[0]
 				hash = commit.Hash
 			}

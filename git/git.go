@@ -127,8 +127,8 @@ func (r Repo) RevList(start, end string) ([]Commit, error) {
 func (r Repo) Tags() ([]Commit, error) {
 	args := []string{
 		"tag",
-		"--list",
 		"--format=%(if)%(*objectname)%(then)%(*objectname)%(else)%(objectname)%(end)%00%00%00%00%(refname)",
+		"--merged=HEAD",
 	}
 	out, err := r.run(args)
 	if err != nil {
