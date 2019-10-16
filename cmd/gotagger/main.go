@@ -107,7 +107,7 @@ func (g GoTagger) Run() int {
 		*latest = latest.IncMajor()
 	case changeType == marker.Feature:
 		*latest = latest.IncMinor()
-	case changeType == marker.Fix:
+	default:
 		*latest = latest.IncPatch()
 	}
 	if len(commits) > 0 {

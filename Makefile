@@ -10,7 +10,7 @@ TESTER  = $(TOOLBIN)/gotestsum
 BUILDDATE := $(shell date +%Y-%m-%d)
 COMMIT    := $(shell git rev-parse HEAD)
 GOOS      := $(shell $(GO) env GOOS)
-VERSION    = 0.1.0
+VERSION   := $(shell $(GO) run ./cmd/gotagger)
 
 # directories
 REPORTDIR = build/reports
