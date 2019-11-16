@@ -44,6 +44,8 @@ and print the new version.
 
 Additionally,
 if the current commit contains the `release` type,
+and the `-release` flag
+or `GOTAGGER_RELEASE` environment variable is set,
 then gotagger will tag the current commit with the new version.
 If there are no commits explicitly marked as a feature or a bug fix,
 then the patch version is incremented.

@@ -1,10 +1,11 @@
 # commands
-GO = go
-GOBUILD = $(GO) build
-GOCOV   = $(TOOLBIN)/gocov
-GOCOVXML = $(TOOLBIN)/gocov-xml
-LINTER  = $(TOOLBIN)/golangci-lint
-TESTER  = $(TOOLBIN)/gotestsum
+GO          = go
+GOBUILD     = $(GO) build
+GOCOV       = $(TOOLBIN)/gocov
+GOCOVXML    = $(TOOLBIN)/gocov-xml
+GOINSTALL  := GOOS= GOARCH= $(GO) install
+LINTER      = $(TOOLBIN)/golangci-lint
+TESTER      = $(TOOLBIN)/gotestsum
 
 # variables
 BUILDDATE := $(shell date +%Y-%m-%d)
@@ -84,5 +85,5 @@ $(REPORTDIR) $(TOOLBIN):
 	@mkdir -p $@
 
 define installtool
-	cd tools/ && GOBIN=$(CURDIR)/$(TOOLBIN) go install $1
+	cd tools/ && GOBIN=$(CURDIR)/$(TOOLBIN) $(GOINSTALL) $1
 endef

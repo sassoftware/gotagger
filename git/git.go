@@ -31,6 +31,7 @@ type Commit struct {
 type Repo struct {
 	dir    string
 	gitDir string
+	runner func([]string, string) ([]byte, error)
 }
 
 func runGitCommand(args []string, path string) ([]byte, error) {
@@ -69,12 +70,12 @@ func New(path string) (Repo, error) {
 	if err != nil {
 		return Repo{}, err
 	}
-	return Repo{dir: path, gitDir: gitDir}, nil
+	return Repo{dir: path, gitDir: gitDir, runner: runGitCommand}, nil
 }
 
 func (r Repo) run(args []string) ([]byte, error) {
 	args = append([]string{"--git-dir", r.gitDir}, args...)
-	return runGitCommand(args, r.dir)
+	return r.runner(args, r.dir)
 }
 
 // CreateTag tags a commit in a git repo.
@@ -95,7 +96,7 @@ func (r Repo) CreateTag(commit string, v *semver.Version, message string, signed
 	if message == "" {
 		message = "Release " + vStr
 	}
-	args = append(args, "-m", message, "--", vStr)
+	args = append(args, "-m", message, vStr, commit)
 	_, err := r.run(args)
 	return err
 }
@@ -103,6 +104,14 @@ func (r Repo) CreateTag(commit string, v *semver.Version, message string, signed
 // Head returns the commit at HEAD
 func (r Repo) Head() (Commit, error) {
 	return Commit{}, nil
+}
+
+// PushTag pushes tag to the remote repository repo.
+func (r Repo) PushTag(tag *semver.Version, repo string) error {
+	refName := fmt.Sprintf("refs/tags/v%s", tag)
+	args := []string{"push", repo, refName + ":" + refName}
+	_, err := r.run(args)
+	return err
 }
 
 // RevList returns a slice of commits from start to end.

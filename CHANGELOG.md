@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add -push and -release flags to control when gotagger tags a releasea commit
+  and pushes the commit.
+- Source options from `GOTAGGER_`-prefixed environment variables.
+
 ### Changed
 
 - When tagging a release commit, increment the patch version if there are no feat or fix

@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 
@@ -54,10 +55,14 @@ func (g GoTagger) Run() int {
 	// Register flags
 	var (
 		showVersion bool
+		pushTag     bool
+		tagRelease  bool
 	)
 
 	flags := flag.NewFlagSet(AppName, flag.ContinueOnError)
 	flags.SetOutput(g.Stderr)
+	flags.BoolVar(&pushTag, "push", boolEnv("push"), "push the just created tag, implies -release")
+	flags.BoolVar(&tagRelease, "release", boolEnv("release"), "tag HEAD with the current version if it is a release commit")
 	flags.BoolVar(&showVersion, "version", false, "show version information")
 
 	setUsage(errLogger, flags)
@@ -112,15 +117,33 @@ func (g GoTagger) Run() int {
 	}
 	if len(commits) > 0 {
 		head := commits[0]
-		if isRelease(head) && !alreadyTagged(latest, head) {
+		if (pushTag || tagRelease) && isRelease(head) && !alreadyTagged(latest, head) {
 			if err := r.CreateTag(head.Hash, latest, "", false, true); err != nil {
 				errLogger.Printf("error: could not tag HEAD (%s): %s", head.Hash, err)
 				return genericErrorExitCode
+			}
+			if pushTag {
+				// TODO: add option to set name of remote
+				if err := r.PushTag(latest, "origin"); err != nil {
+					errLogger.Printf("error: could not push tag (%s): %s", latest, err)
+					return genericErrorExitCode
+				}
 			}
 		}
 	}
 	outLogger.Println(latest)
 	return successExitCode
+}
+
+func boolEnv(env string) bool {
+	env = "GOTAGGER_" + strings.ToUpper(env)
+	val := os.Getenv(env)
+	switch strings.ToLower(val) {
+	case "", "false", "0", "no":
+		return false
+	default:
+		return true
+	}
 }
 
 func alreadyTagged(v *semver.Version, c git.Commit) bool {
@@ -177,8 +200,7 @@ func scanForMarkers(commits []git.Commit) (mark marker.Marker, isBreaking bool) 
 
 const (
 	usagePrefix = `Usage: %s [OPTION]... [PATH]
-Print the current version of the project to standard output. If the commit at
-HEAD is the release type, then tag that commit with the current version.
+Print the current version of the project to standard output.
 
 With no PATH the current directory is used.
 

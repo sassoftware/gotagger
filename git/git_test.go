@@ -14,6 +14,83 @@ import (
 	"github.com/Masterminds/semver/v3"
 )
 
+// tests that inject a mock runner function
+func mockRunGitCommand(t *testing.T, wantArgs []string, wantPath string) func([]string, string) ([]byte, error) {
+	return func(args []string, path string) ([]byte, error) {
+		if !reflect.DeepEqual(wantArgs, args) {
+			t.Errorf("want %q, got %q", wantArgs, args)
+		}
+		if wantPath != path {
+			t.Errorf("want '%s', got '%s'", wantPath, path)
+		}
+		return []byte{}, nil
+	}
+}
+
+func TestCreateTag(t *testing.T) {
+	tests := []struct {
+		message        string
+		signed, prefix bool
+		version        *semver.Version
+		want           []string
+	}{
+		{
+			want: []string{"--git-dir", ".git", "tag", "-m", "Release 1.0.0", "1.0.0", "commit"},
+		},
+		{
+			message: "message",
+			want:    []string{"--git-dir", ".git", "tag", "-m", "message", "1.0.0", "commit"},
+		},
+		{
+			message: "message",
+			prefix:  true,
+			want:    []string{"--git-dir", ".git", "tag", "-m", "message", "v1.0.0", "commit"},
+		},
+		{
+			message: "message",
+			signed:  true,
+			want:    []string{"--git-dir", ".git", "tag", "-s", "-m", "message", "1.0.0", "commit"},
+		},
+		{
+			message: "message",
+			prefix:  true,
+			signed:  true,
+			want:    []string{"--git-dir", ".git", "tag", "-s", "-m", "message", "v1.0.0", "commit"},
+		},
+		{
+			prefix: true,
+			want:   []string{"--git-dir", ".git", "tag", "-m", "Release v1.0.0", "v1.0.0", "commit"},
+		},
+		{
+			prefix: true,
+			signed: true,
+			want:   []string{"--git-dir", ".git", "tag", "-s", "-m", "Release v1.0.0", "v1.0.0", "commit"},
+		},
+		{
+			signed: true,
+			want:   []string{"--git-dir", ".git", "tag", "-s", "-m", "Release 1.0.0", "1.0.0", "commit"},
+		},
+	}
+
+	t.Parallel()
+	v := semver.MustParse("1.0.0")
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			r := Repo{"path", ".git", mockRunGitCommand(t, tt.want, "path")}
+			_ = r.CreateTag("commit", v, tt.message, tt.signed, tt.prefix)
+		})
+	}
+}
+
+func TestPushTags(t *testing.T) {
+	v := semver.MustParse("1.0.0")
+	wantArgs := []string{"--git-dir", ".git", "push", "origin", "refs/tags/v1.0.0:refs/tags/v1.0.0"}
+	wantPath := "path"
+	repo := Repo{"path", ".git", mockRunGitCommand(t, wantArgs, wantPath)}
+	_ = repo.PushTag(v, "origin")
+}
+
+// tests that use a real git repo
 func runTestGitCommand(t *testing.T, path string, args ...string) {
 	_, err := runGitCommand(args, path)
 	if err != nil {
