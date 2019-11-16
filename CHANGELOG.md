@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [v0.2.0] - 2019/11/15
 
 ### Added
 
@@ -43,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - marker package for parsing commmit markers
 - basic cli capability: printing the new version and tagging a repo
 
-[Unreleased]: https://github.com/sassoftware/gotagger/compare/v0.1.2...master
+[v0.2.0]: https://github.com/sassoftware/gotagger/compare/v0.1.2...v0.2.0
 [v0.1.2]: https://github.com/sassoftware/gotagger/compare/v0.1.1...v0.1.2
 [v0.1.1]: https://github.com/sassoftware/gotagger/compare/v0.1.0...v0.1.1
 [v0.1.0]: https://github.com/sassoftware/gotagger/compare/e3ef062...v0.1.0
