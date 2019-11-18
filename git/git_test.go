@@ -29,10 +29,10 @@ func mockRunGitCommand(t *testing.T, wantArgs []string, wantPath string) func([]
 
 func TestCreateTag(t *testing.T) {
 	tests := []struct {
-		message        string
-		signed, prefix bool
-		version        *semver.Version
-		want           []string
+		message, prefix string
+		signed          bool
+		version         *semver.Version
+		want            []string
 	}{
 		{
 			want: []string{"--git-dir", ".git", "tag", "-m", "Release 1.0.0", "1.0.0", "commit"},
@@ -43,7 +43,7 @@ func TestCreateTag(t *testing.T) {
 		},
 		{
 			message: "message",
-			prefix:  true,
+			prefix:  "v",
 			want:    []string{"--git-dir", ".git", "tag", "-m", "message", "v1.0.0", "commit"},
 		},
 		{
@@ -53,16 +53,16 @@ func TestCreateTag(t *testing.T) {
 		},
 		{
 			message: "message",
-			prefix:  true,
+			prefix:  "v",
 			signed:  true,
 			want:    []string{"--git-dir", ".git", "tag", "-s", "-m", "message", "v1.0.0", "commit"},
 		},
 		{
-			prefix: true,
+			prefix: "v",
 			want:   []string{"--git-dir", ".git", "tag", "-m", "Release v1.0.0", "v1.0.0", "commit"},
 		},
 		{
-			prefix: true,
+			prefix: "v",
 			signed: true,
 			want:   []string{"--git-dir", ".git", "tag", "-s", "-m", "Release v1.0.0", "v1.0.0", "commit"},
 		},
@@ -77,7 +77,7 @@ func TestCreateTag(t *testing.T) {
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			r := Repo{"path", ".git", mockRunGitCommand(t, tt.want, "path")}
-			_ = r.CreateTag("commit", v, tt.message, tt.signed, tt.prefix)
+			_ = r.CreateTag("commit", v, tt.prefix, tt.message, tt.signed)
 		})
 	}
 }

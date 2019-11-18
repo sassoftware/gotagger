@@ -11,10 +11,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
-
+	"sassoftware.io/clis/gotagger"
 	"sassoftware.io/clis/gotagger/git"
-	"sassoftware.io/clis/gotagger/marker"
 )
 
 const (
@@ -86,50 +84,14 @@ func (g GoTagger) Run() int {
 		return genericErrorExitCode
 	}
 
-	// Find the latest semver and the commit hash it references.
-	latest, commitHash, err := getLatest(r)
+	cfg := gotagger.NewDefaultConfig()
+	cfg.CreateTag = tagRelease
+	cfg.PushTag = pushTag
+
+	latest, err := gotagger.TagRepo(cfg, r)
 	if err != nil {
 		errLogger.Println("error: ", err)
 		return genericErrorExitCode
-	}
-
-	// Find the most significant marker between HEAD and the latest tagged commit.
-	commits, err := r.RevList("HEAD", commitHash)
-	if err != nil {
-		errLogger.Printf("error: could not fetch commits HEAD..%s: %s", commitHash, err)
-		return genericErrorExitCode
-	}
-
-	// If HEAD is already tagged, just display the latest version
-	if len(commits) == 0 {
-		outLogger.Println(latest)
-		return successExitCode
-	}
-
-	changeType, isBreaking := scanForMarkers(commits)
-	switch {
-	case isBreaking:
-		*latest = latest.IncMajor()
-	case changeType == marker.Feature:
-		*latest = latest.IncMinor()
-	default:
-		*latest = latest.IncPatch()
-	}
-	if len(commits) > 0 {
-		head := commits[0]
-		if (pushTag || tagRelease) && isRelease(head) && !alreadyTagged(latest, head) {
-			if err := r.CreateTag(head.Hash, latest, "", false, true); err != nil {
-				errLogger.Printf("error: could not tag HEAD (%s): %s", head.Hash, err)
-				return genericErrorExitCode
-			}
-			if pushTag {
-				// TODO: add option to set name of remote
-				if err := r.PushTag(latest, "origin"); err != nil {
-					errLogger.Printf("error: could not push tag (%s): %s", latest, err)
-					return genericErrorExitCode
-				}
-			}
-		}
 	}
 	outLogger.Println(latest)
 	return successExitCode
@@ -144,58 +106,6 @@ func boolEnv(env string) bool {
 	default:
 		return true
 	}
-}
-
-func alreadyTagged(v *semver.Version, c git.Commit) bool {
-	for _, t := range c.Tags {
-		if v.Equal(t) {
-			return true
-		}
-	}
-	return false
-}
-
-func isRelease(c git.Commit) bool {
-	m, _, _ := marker.Parse(c.Subject)
-	return m == marker.Release
-}
-
-func getLatest(r git.Repo) (latest *semver.Version, hash string, err error) {
-	taggedCommits, err := r.Tags()
-	if err != nil {
-		return latest, hash, err
-	}
-	latest = new(semver.Version)
-	for _, commit := range taggedCommits {
-		if len(commit.Tags) > 0 {
-			if latest.LessThan(commit.Tags[0]) {
-				latest = commit.Tags[0]
-				hash = commit.Hash
-			}
-		}
-	}
-	return latest, hash, nil
-}
-
-func scanForMarkers(commits []git.Commit) (mark marker.Marker, isBreaking bool) {
-	if len(commits) != 0 {
-		for _, c := range commits {
-			m, _, b := marker.Parse(c.Subject)
-			switch m {
-			case marker.Feature:
-				mark = m
-			case marker.Fix:
-				if mark != marker.Feature {
-					mark = m
-				}
-			}
-			// if we already saw a breaking change, we can stop checking
-			if !isBreaking && (b || marker.IsBreaking(c.Trailers)) {
-				isBreaking = true
-			}
-		}
-	}
-	return mark, isBreaking
 }
 
 const (

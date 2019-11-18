@@ -65,25 +65,23 @@ report: test | $(GOCOV) $(GOCOVXML)
 test tests: | $(TESTER) $(REPORTDIR)
 	$(TESTER) $(TESTFLAGS) ./...
 
-# real targets
-$(GOCOV): $(TOOLREQS) | $(TOOLBIN)
-	$(call installtool,github.com/axw/gocov/gocov)
-
-$(GOCOVXML): | $(TOOLBIN)
-	$(call installtool,github.com/AlekSi/gocov-xml)
-
-$(LINTER): | $(TOOLBIN)
-	$(call installtool,github.com/golangci/golangci-lint/cmd/golangci-lint)
-
 $(TARGET):
 	$(GOBUILD) $(BUILDFLAGS) -o $@ ./cmd/gotagger/main.go
-
-$(TESTER): | $(TOOLBIN)
-	$(call installtool,gotest.tools/gotestsum)
 
 $(REPORTDIR) $(TOOLBIN):
 	@mkdir -p $@
 
+tools/go.mod tools/go.sum: tools/tools.go
+	cd tools/ && go mod tidy
+
 define installtool
-	cd tools/ && GOBIN=$(CURDIR)/$(TOOLBIN) $(GOINSTALL) $1
+$1: tools/go.mod tools/go.sum | $$(TOOLBIN)
+	cd tools/ && GOBIN=$$(CURDIR)/$$(TOOLBIN) $$(GOINSTALL) $2
+
 endef
+
+# tool targets
+$(eval $(call installtool,$(GOCOV),github.com/axw/gocov/gocov))
+$(eval $(call installtool,$(GOCOVXML),github.com/AlekSi/gocov-xml))
+$(eval $(call installtool,$(LINTER),github.com/golangci/golangci-lint/cmd/golangci-lint))
+$(eval $(call installtool,$(TESTER),gotest.tools/gotestsum))

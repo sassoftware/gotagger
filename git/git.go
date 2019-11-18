@@ -83,11 +83,11 @@ func (r Repo) run(args []string) ([]byte, error) {
 // If signed is true, then the tag will be a signed tag. This requires that
 // your git configuration is properly setup for signing.
 //
-// If prefix is true, the tag name will inclue a leading 'v'.
-func (r Repo) CreateTag(commit string, v *semver.Version, message string, signed, prefix bool) error {
+// If prefix is a non-empty string, then the version will be prefixed with that string.
+func (r Repo) CreateTag(commit string, v *semver.Version, prefix, message string, signed bool) error {
 	vStr := v.String()
-	if prefix {
-		vStr = "v" + vStr
+	if prefix != "" {
+		vStr = prefix + vStr
 	}
 	args := []string{"tag"}
 	if signed {
