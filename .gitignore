@@ -56,10 +56,4 @@ tags
 # End of https://www.gitignore.io/api/go,vim,visualstudiocode
 
 # output directories
-<<<<<<< HEAD
 /build/
-=======
-/bin/
-/tests/
-/tools/bin/
->>>>>>> 464e66f (build: use gotestsum as test driver)

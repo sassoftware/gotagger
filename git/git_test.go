@@ -165,44 +165,41 @@ func Test_parseCommits(t *testing.T) {
 }
 
 func Test_parseTags(t *testing.T) {
+	v1 := semver.MustParse("1.0.0")
+	v2 := semver.MustParse("2.0.0")
+
 	tests := []struct {
 		refname string
 		want    []*semver.Version
 	}{
+		{refname: "(HEAD -> refs/heads/master)", want: []*semver.Version{}},
+		{refname: "(HEAD -> refs/heads/master, tag: refs/tags/v1.0.0)", want: []*semver.Version{v1}},
+		{refname: "(HEAD -> refs/heads/master, tag: refs/tags/1.0.0)", want: []*semver.Version{v1}},
+		{refname: "(HEAD -> refs/heads/master, tag: refs/tags/1.0.0, tag: refs/tags/2.0.0)", want: []*semver.Version{v2, v1}},
+		{refname: "(tag: refs/tags/v1.0.0, refs/heads/master)", want: []*semver.Version{v1}},
+		{refname: "(tag: refs/tags/1.0.0, refs/heads/master)", want: []*semver.Version{v1}},
+		{refname: "(tag: refs/tags/1.0.0, tag: refs/tags/2.0.0, refs/heads/master)", want: []*semver.Version{v2, v1}},
 		{refname: "(HEAD -> master)", want: []*semver.Version{}},
-		{refname: "(master, origin/master)", want: []*semver.Version{}},
-		{refname: "(master, 1.2)", want: []*semver.Version{}},
-		{refname: "(master, 1.2.2)", want: []*semver.Version{}},
-		{refname: "(master, refs/tags/1.2)", want: []*semver.Version{semver.MustParse("1.2")}},
-		{refname: "(master, refs/tags/1.2.2)", want: []*semver.Version{semver.MustParse("1.2.2")}},
-		{refname: "(master, refs/tags/v1.2.2)", want: []*semver.Version{semver.MustParse("1.2.2")}},
-		{refname: "(refs/tags/1.2, master)", want: []*semver.Version{semver.MustParse("1.2")}},
-		{refname: "(refs/tags/1.2.2, master)", want: []*semver.Version{semver.MustParse("1.2.2")}},
-		{refname: "(refs/tags/v1.2.2, master)", want: []*semver.Version{semver.MustParse("1.2.2")}},
-		{
-			refname: "(refs/tags/1.2.3, refs/tags/v1.2.2, master)",
-			want:    []*semver.Version{semver.MustParse("1.2.3"), semver.MustParse("1.2.2")},
-		},
-		{
-			refname: "(refs/tags/1.2.2, refs/tags/v1.2.3, master)",
-			want:    []*semver.Version{semver.MustParse("1.2.3"), semver.MustParse("1.2.2")},
-		},
-		{
-			refname: "(refs/tags/v1.2.2, refs/tags/v1.2.3, master)",
-			want:    []*semver.Version{semver.MustParse("1.2.3"), semver.MustParse("1.2.2")},
-		},
+		{refname: "(HEAD -> master, tag: v1.0.0)", want: []*semver.Version{v1}},
+		{refname: "(HEAD -> master, tag: 1.0.0)", want: []*semver.Version{v1}},
+		{refname: "(HEAD -> master, tag: 1.0.0, tag: 2.0.0)", want: []*semver.Version{v2, v1}},
+		{refname: "(tag: v1.0.0, master)", want: []*semver.Version{v1}},
+		{refname: "(tag: 1.0.0, master)", want: []*semver.Version{v1}},
+		{refname: "(tag: 1.0.0, tag: 2.0.0, master)", want: []*semver.Version{v2, v1}},
 	}
+
 	t.Parallel()
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d:%s-%q", i, tt.refname, tt.want), func(t *testing.T) {
 			got := parseTags(tt.refname)
-			if len(got) != len(tt.want) {
-				t.Errorf("want %d tags, got %d tags", len(tt.want), len(got))
-			}
-			for i, v := range tt.want {
-				if !v.Equal(got[i]) {
-					t.Errorf("want %s at index %d, got %s", v, i, got[i])
+			if len(got) == len(tt.want) {
+				for i, v := range tt.want {
+					if !v.Equal(got[i]) {
+						t.Errorf("want %s at index %d, got %s", v, i, got[i])
+					}
 				}
+			} else {
+				t.Errorf("want %d tags, got %d tags", len(tt.want), len(got))
 			}
 		})
 	}
@@ -271,11 +268,8 @@ func TestTags(t *testing.T) {
 		t.Errorf("want %d commits, got %d", 1, len(commits))
 	}
 	commit := commits[0]
-	if commit.Body != "" {
-		t.Errorf("tag commit has body")
-	}
 	if len(commit.Tags) != 1 {
-		t.Errorf("want 1 tag, got %d", len(commit.Tags))
+		t.Fatalf("want 1 tag, got %d", len(commit.Tags))
 	}
 	want := semver.MustParse("v1.0.0")
 	got := commit.Tags[0]

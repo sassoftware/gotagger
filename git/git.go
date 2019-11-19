@@ -41,17 +41,24 @@ func runGitCommand(args []string, path string) ([]byte, error) {
 	}
 	out, err := c.Output()
 	if err != nil {
-		if xerr, ok := err.(*exec.ExitError); ok {
-			switch xerr.ExitCode() {
+		switch err := err.(type) {
+		case *exec.ExitError:
+			code := err.ExitCode()
+			switch code {
 			case 127:
-				err = fmt.Errorf("git command not found. Make sure git is installed and on your path")
-			case 128:
-				err = fmt.Errorf("not a git respository: %s", path)
+				return nil, fmt.Errorf("git command not found. Make sure git is installed and on your path")
 			default:
-				err = fmt.Errorf("git rev-prase failed: %s", xerr.Stderr)
+				command := "git"
+				for _, arg := range args {
+					if strings.Contains(arg, " ") {
+						arg = "'" + arg + "'"
+					}
+					command += " " + arg
+				}
+				return nil, fmt.Errorf("%s failed with exit code %d: %s", command, code, err.Stderr)
 			}
 		}
-		return []byte{}, err
+		return nil, err
 	}
 	return out, err
 }
@@ -116,7 +123,30 @@ func (r Repo) PushTag(tag *semver.Version, repo string) error {
 
 // RevList returns a slice of commits from start to end.
 func (r Repo) RevList(start, end string) ([]Commit, error) {
-	args := []string{"log", "--decorate=full", "--format=%H%x00%s%x00%b%x00%(trailers:only,unfold,separator=|)%x00%d%x00%x00", start}
+	return r.log(start, end, "--decorate=full")
+}
+
+// Tags returns a slice of all tagged commits.
+func (r Repo) Tags() ([]Commit, error) {
+	commits, err := r.log("HEAD", "", "--simplify-by-decoration")
+	if err != nil {
+		return nil, err
+	}
+	rv := []Commit{}
+	for _, c := range commits {
+		if len(c.Tags) > 0 {
+			rv = append(rv, c)
+		}
+	}
+	return rv, nil
+}
+
+func (r Repo) log(start, end string, extra ...string) ([]Commit, error) {
+	args := []string{"log", "--format=%H%x00%s%x00%b%x00%(trailers:only,unfold,separator=|)%x00%d%x00%x00"}
+	if extra != nil {
+		args = append(args, extra...)
+	}
+	args = append(args, start)
 	if end != "" {
 		args = append(args, "^"+end)
 	}
@@ -132,47 +162,35 @@ func (r Repo) RevList(start, end string) ([]Commit, error) {
 	return parseCommits(lines), nil
 }
 
-// Tags returns a slice of all tagged commits.
-func (r Repo) Tags() ([]Commit, error) {
-	args := []string{
-		"tag",
-		"--format=%(if)%(*objectname)%(then)%(*objectname)%(else)%(objectname)%(end)%00%00%00%00%(refname)",
-		"--merged=HEAD",
-	}
-	out, err := r.run(args)
-	if err != nil {
-		return nil, err
-	}
-	out = bytes.TrimSpace(out)
-	if len(out) == 0 {
-		return []Commit{}, nil
-	}
-	lines := bytes.Split(out, []byte("\n"))
-	return parseCommits(lines), nil
-}
-
 func parseCommits(lines [][]byte) []Commit {
 	commits := make([]Commit, len(lines))
-	for i := 0; i < len(lines); i++ {
-		line := bytes.Split(lines[i], gitLogSeparator)
+	for i, line := range lines {
+		parts := bytes.Split(line, gitLogSeparator)
+		// sanity check
+		if len(parts) != 5 {
+			panic("unexpected commit entry format")
+		}
+		hash, subject, body, trailers, tags := parts[0], parts[1], parts[2], parts[3], parts[4]
 		commits[i] = Commit{
-			Hash:     string(line[0]),
-			Subject:  string(line[1]),
-			Body:     string(line[2]),
-			Trailers: strings.Split(string(line[3]), "|"),
-			Tags:     parseTags(string(line[4])),
+			Hash:     string(hash),
+			Subject:  string(subject),
+			Body:     string(body),
+			Trailers: strings.Split(string(trailers), "|"),
+			Tags:     parseTags(string(tags)),
 		}
 	}
 	return commits
 }
 
 func parseTags(refname string) []*semver.Version {
-	tags := make([]*semver.Version, 0)
-	if strings.Contains(refname, "refs/tags") {
-		// remove (, ) and " "
+	tags := []*semver.Version{}
+	if strings.Contains(refname, "tag:") {
+		// remove (, ), and " "
 		refname = strings.Trim(refname, "() ")
-		// split on "refs/tags/"
-		for _, tagString := range strings.Split(refname, "refs/tags/")[1:] {
+		// split on "tag: "
+		for _, tagString := range strings.Split(refname, "tag: ")[1:] {
+			// Strip refs/tags/
+			tagString = strings.ReplaceAll(tagString, "refs/tags/", "")
 			// git does not allow : or " " in tag names, so we can safely split on ", "
 			candidate := strings.Split(tagString, ", ")[0]
 			if tag, err := semver.NewVersion(candidate); err == nil {
