@@ -1,6 +1,8 @@
 // Copyright (c) SAS Institute, Inc.
 
 // Package marker implements finding and working with markers in commit messages.
+//
+// This package is deprecated and will be removed before the v1.0.0 release of gotagger.
 package marker
 
 import (

@@ -4,6 +4,8 @@
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
 - [Changelog](#changelog)
+    - [[Unreleased]](#unreleased)
+        - [Refactor](#refactor)
     - [[v0.4.0] - 2019/07/10](#v040-20190710)
         - [Added](#added)
         - [Fixed](#fixed)
@@ -24,13 +26,23 @@
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 <!-- markdownlint-enable -->
 
-<!-- markdownlint-disable MD024 -->
+<!-- markdownlint-disable MD013 MD024 -->
 # Changelog
 
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Refactor
+
+- Rewrite git and conventional commit parsing.
+  This is preparing for submodule support.
+  The existing commit parsing and git repository interactions won't scale to solve the problem of tagging sumodules.
+  These packages will remain until the v1.0.0 release of `gotagger`.
+  [GOFR-206](https://rndjira.sas.com/browse/GOFR-206)
 
 ## [v0.4.0] - 2019/07/10
 

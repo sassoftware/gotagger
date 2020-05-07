@@ -1,6 +1,8 @@
 // Copyright (c) SAS Institute, Inc.
 //
 // The git package contains functions for running git commands.
+//
+// This package is deprecated and will be removed before the v1.0.0 release of gotagger.
 package git
 
 import (
