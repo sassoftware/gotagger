@@ -1,4 +1,29 @@
+<!-- markdownlint-disable -->
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [Changelog](#changelog)
+    - [[v0.3.1] -  2019/12/16](#v031-20191216)
+        - [Fixed](#fixed)
+    - [[v0.3.0] - 2019/11/18](#v030-20191118)
+        - [Added](#added)
+    - [[v0.2.0] - 2019/11/15](#v020-20191115)
+        - [Added](#added-1)
+        - [Changed](#changed)
+    - [[v0.1.2] - 2019/10/14](#v012-20191014)
+        - [Fixed](#fixed-1)
+    - [[v0.1.1] - 2019/10/12](#v011-20191012)
+        - [Fixed](#fixed-2)
+    - [[v0.1.0] - 2019/10/11](#v010-20191011)
+        - [Added](#added-2)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+<!-- markdownlint-enable -->
+
+<!-- markdownlint-disable MD024 -->
 # Changelog
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
@@ -14,8 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- The base package now exposes a Config struct and a TagRepo function that preforms the
-  basic operations of gotagger.
+- The base package now exposes a Config struct and a TagRepo function that
+  preforms the basic operations of gotagger.
 
 ## [v0.2.0] - 2019/11/15
 
@@ -27,8 +52,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- When tagging a release commit, increment the patch version if there are no feat or fix
-  commits since the last release.
+- When tagging a release commit, increment the patch version if there are no
+  feat or fix commits since the last release.
 
 ## [v0.1.2] - 2019/10/14
 

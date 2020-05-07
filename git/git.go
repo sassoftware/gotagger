@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os/exec"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -127,18 +128,45 @@ func (r Repo) RevList(start, end string) ([]Commit, error) {
 }
 
 // Tags returns a slice of all tagged commits.
-func (r Repo) Tags() ([]Commit, error) {
-	commits, err := r.log("HEAD", "", "--simplify-by-decoration")
+func (r Repo) Tags(prefixes ...string) (commits []Commit, err error) {
+	rawCommits, err := r.log("HEAD", "", "--simplify-by-decoration")
 	if err != nil {
 		return nil, err
 	}
-	rv := []Commit{}
-	for _, c := range commits {
-		if len(c.Tags) > 0 {
-			rv = append(rv, c)
+
+	for _, c := range rawCommits {
+		if len(prefixes) > 0 {
+			// filter tags by prefixes
+			for _, t := range c.Tags {
+				if hasPrefix(t, prefixes) {
+					commits = append(commits, c)
+					break
+				}
+			}
+		} else if len(c.Tags) > 0 {
+			commits = append(commits, c)
 		}
 	}
-	return rv, nil
+
+	return
+}
+
+// hasPrefix returns true if t has a prefix that matches any prefixes.
+// The empty string matches if t has no prefix.
+func hasPrefix(t *semver.Version, prefixes []string) bool {
+	o := t.Original()
+	for _, prefix := range prefixes {
+		if prefix == "" {
+			// then t must have no prefix
+			if _, err := strconv.Atoi(o[0:1]); err == nil {
+				return true
+			}
+		} else if strings.HasPrefix(o, prefix) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (r Repo) log(start, end string, extra ...string) ([]Commit, error) {

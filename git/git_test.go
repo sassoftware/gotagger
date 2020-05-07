@@ -277,3 +277,79 @@ func TestTags(t *testing.T) {
 		t.Errorf("want %s, got %s", want, got)
 	}
 }
+
+func TestTags_prefix(t *testing.T) {
+	dir := makeGitRepo(t)
+	defer func() { os.RemoveAll(dir) }()
+	r, err := New(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	commits, err := r.Tags("prefix")
+	if err != nil {
+		if err, ok := err.(*exec.ExitError); ok {
+			t.Fatal(string(err.Stderr))
+		}
+		t.Fatal(err)
+	}
+	if got, want := len(commits), 0; got != want {
+		t.Errorf("Tags(%q) returned %d commits, want %d", "prefix", got, want)
+	}
+}
+
+func Test_hasPrefix(t *testing.T) {
+	tests := []struct {
+		title    string
+		version  string
+		prefixes []string
+		want     bool
+	}{
+		{
+			"match v1.0.0",
+			"v1.0.0",
+			[]string{"v"},
+			true,
+		},
+		{
+			"match 1.0.0",
+			"1.0.0",
+			[]string{""},
+			true,
+		},
+		{
+			"do not match v1.0.0",
+			"v1.0.0",
+			[]string{"foo"},
+			false,
+		},
+		{
+			"do not match 1.0.0",
+			"1.0.0",
+			[]string{"v"},
+			false,
+		},
+		{
+			"multiple prefixes",
+			"v1.0.0",
+			[]string{"", "v"},
+			true,
+		},
+		{
+			"multiple prefixes",
+			"1.0.0",
+			[]string{"", "v"},
+			true,
+		},
+	}
+
+	t.Parallel()
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.title, func(t *testing.T) {
+			v := semver.MustParse(tt.version)
+			if got, want := hasPrefix(v, tt.prefixes), tt.want; got != want {
+				t.Errorf("hasPrefx returned %v, want %v", got, want)
+			}
+		})
+	}
+}

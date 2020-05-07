@@ -1,5 +1,5 @@
 linters:
   enable:
-  - goimports
-  - golint
-  - gosec
+    - goimports
+    - golint
+    - gosec

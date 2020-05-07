@@ -53,7 +53,7 @@ func NewDefaultConfig() *Config {
 // the Config passed it, it may also create the tag and push it.
 func TagRepo(cfg *Config, r git.Repo) (*semver.Version, error) {
 	// Find the latest semver and the commit hash it references.
-	latest, commitHash, err := getLatest(r)
+	latest, commitHash, err := getLatest(r, cfg.VersionPrefix)
 	if err != nil {
 		return nil, err
 	}
@@ -109,8 +109,8 @@ func isRelease(c git.Commit) bool {
 	return m == marker.Release
 }
 
-func getLatest(r git.Repo) (latest *semver.Version, hash string, err error) {
-	taggedCommits, err := r.Tags()
+func getLatest(r git.Repo, prefix string) (latest *semver.Version, hash string, err error) {
+	taggedCommits, err := r.Tags(prefix)
 	if err != nil {
 		return latest, hash, err
 	}
