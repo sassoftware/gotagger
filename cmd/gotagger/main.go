@@ -9,11 +9,11 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"runtime/pprof"
 	"strconv"
 	"strings"
 
 	"sassoftware.io/clis/gotagger"
-	"sassoftware.io/clis/gotagger/git"
 )
 
 const (
@@ -35,6 +35,10 @@ var (
 	AppVersion = "dev"
 	Commit     = "unknown"
 	BuildDate  = "none"
+
+	// profiling options
+	cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
+	memprofile = flag.String("memprofile", "", "write memory profile to file")
 )
 
 // GoTagger represents a specific execution of the gotagger cli
@@ -70,6 +74,10 @@ func (g *GoTagger) Run() int {
 	flags.BoolVar(&g.tagRelease, "release", g.boolEnv("release", false), "tag HEAD with the current version if it is a release commit")
 	flags.StringVar(&g.versionPrefix, "prefix", g.stringEnv("prefix", "v"), "set a prefix for versions")
 
+	// ignore profiling options
+	flags.String("cpuprofile", "", "write cpu profile to file")
+	flags.String("memprofile", "", "write memory profile to file")
+
 	g.setUsage(flags)
 	if err := flags.Parse(g.Args[1:]); err != nil {
 		return genericErrorExitCode
@@ -85,25 +93,30 @@ func (g *GoTagger) Run() int {
 	if path == "" {
 		path = g.WorkingDir
 	}
-	r, err := git.New(path)
+	r, err := gotagger.New(path)
+	if err != nil {
+		g.err.Println("error: ", err)
+		return genericErrorExitCode
+	}
+	r.Config.CreateTag = g.tagRelease
+	r.Config.PushTag = g.pushTag
+	r.Config.RemoteName = g.remoteName
+	r.Config.VersionPrefix = g.versionPrefix
+
+	if err := os.Chdir(path); err != nil {
+		g.err.Println("error: ", err)
+	}
+
+	versions, err := r.TagRepo()
 	if err != nil {
 		g.err.Println("error: ", err)
 		return genericErrorExitCode
 	}
 
-	cfg := &gotagger.Config{
-		RemoteName:    g.remoteName,
-		CreateTag:     g.tagRelease,
-		PushTag:       g.pushTag,
-		VersionPrefix: g.versionPrefix,
+	for _, version := range versions {
+		g.out.Println(version)
 	}
 
-	latest, err := gotagger.TagRepo(cfg, r)
-	if err != nil {
-		g.err.Println("error: ", err)
-		return genericErrorExitCode
-	}
-	g.out.Println(latest)
 	return successExitCode
 }
 
@@ -146,7 +159,8 @@ Options:
 	usageSuffix = `
 The current version is determined by finding the commit tagged with highest
 version in the current branch and then determing what type of commits were made
-since that commit.
+since that commit. Go submodules can be tagged by including the module name in a
+Modules footer in the release commit message.
 `
 )
 
@@ -164,11 +178,25 @@ func versionInfo(version, commit, date string) string {
 }
 
 func main() {
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal("error: could not create CPU profile:", err)
+		}
+		defer f.Close()
+
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("error: could not start CPU profile:", err)
+		}
+		defer pprof.StopCPUProfile()
+	}
+
 	wd, err := os.Getwd()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to get current working directory: %s", err)
 		os.Exit(genericErrorExitCode)
 	}
+
 	exc := &GoTagger{
 		Args:       os.Args,
 		Env:        os.Environ(),
@@ -176,5 +204,20 @@ func main() {
 		Stderr:     os.Stdin,
 		WorkingDir: wd,
 	}
-	os.Exit(exc.Run())
+	rc := exc.Run()
+
+	if *memprofile != "" {
+		f, err := os.Create(*memprofile)
+		if err != nil {
+			log.Fatal("error: could not create memory profile:", err)
+		}
+		defer f.Close()
+
+		runtime.GC()
+		if err := pprof.Lookup("heap").WriteTo(f, 0); err != nil {
+			log.Fatal("error: could not write memory profile:", err)
+		}
+	}
+
+	os.Exit(rc)
 }

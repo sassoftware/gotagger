@@ -5,6 +5,7 @@
 
 - [Changelog](#changelog)
     - [[Unreleased]](#unreleased)
+        - [Feature](#feature)
         - [Refactor](#refactor)
     - [[v0.4.0] - 2019/07/10](#v040-20190710)
         - [Added](#added)
@@ -36,13 +37,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Feature
+
+- Added support for tagging submodules via releaes commits.
+  A release commit may contain a `Modules` footer that is a comma-separated list of submodules for gotagger to tag.
+  The main module may be included by including `.` in the list of modules.
+
 ### Refactor
 
 - Rewrite git and conventional commit parsing.
   This is preparing for submodule support.
   The existing commit parsing and git repository interactions won't scale to solve the problem of tagging sumodules.
   These packages will remain until the v1.0.0 release of `gotagger`.
-  [GOFR-206](https://rndjira.sas.com/browse/GOFR-206)
 
 ## [v0.4.0] - 2019/07/10
 
