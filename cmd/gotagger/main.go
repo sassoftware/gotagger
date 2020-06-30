@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"sassoftware.io/clis/gotagger"
@@ -42,34 +43,40 @@ type GoTagger struct {
 	Env            []string  // The os environment
 	Stdout, Stderr io.Writer // Output writers
 	WorkingDir     string    // The directory the process is run from
+
+	// output loggers
+	out *log.Logger
+	err *log.Logger
+
+	// command-line options
+	pushTag       bool
+	remoteName    string
+	showVersion   bool
+	tagRelease    bool
+	versionPrefix string
 }
 
 // Runs GoTagger.
-func (g GoTagger) Run() int {
+func (g *GoTagger) Run() int {
 	// setup logggers to write to stdout/stderr
-	outLogger := log.New(g.Stdout, "", 0)
-	errLogger := log.New(g.Stderr, "", 0)
-
-	// Register flags
-	var (
-		showVersion bool
-		pushTag     bool
-		tagRelease  bool
-	)
+	g.out = log.New(g.Stdout, "", 0)
+	g.err = log.New(g.Stderr, "", 0)
 
 	flags := flag.NewFlagSet(AppName, flag.ContinueOnError)
 	flags.SetOutput(g.Stderr)
-	flags.BoolVar(&pushTag, "push", boolEnv("push"), "push the just created tag, implies -release")
-	flags.BoolVar(&tagRelease, "release", boolEnv("release"), "tag HEAD with the current version if it is a release commit")
-	flags.BoolVar(&showVersion, "version", false, "show version information")
+	flags.BoolVar(&g.pushTag, "push", g.boolEnv("push", false), "push the just created tag, implies -release")
+	flags.StringVar(&g.remoteName, "remote", g.stringEnv("remote", "origin"), "name of the remote to push tags to")
+	flags.BoolVar(&g.showVersion, "version", false, "show version information")
+	flags.BoolVar(&g.tagRelease, "release", g.boolEnv("release", false), "tag HEAD with the current version if it is a release commit")
+	flags.StringVar(&g.versionPrefix, "prefix", g.stringEnv("prefix", "v"), "set a prefix for versions")
 
-	setUsage(errLogger, flags)
+	g.setUsage(flags)
 	if err := flags.Parse(g.Args[1:]); err != nil {
 		return genericErrorExitCode
 	}
 
-	if showVersion {
-		outLogger.Print(versionInfo(AppVersion, Commit, BuildDate))
+	if g.showVersion {
+		g.out.Print(versionInfo(AppVersion, Commit, BuildDate))
 		return successExitCode
 	}
 
@@ -80,32 +87,50 @@ func (g GoTagger) Run() int {
 	}
 	r, err := git.New(path)
 	if err != nil {
-		errLogger.Println("error: ", err)
+		g.err.Println("error: ", err)
 		return genericErrorExitCode
 	}
 
-	cfg := gotagger.NewDefaultConfig()
-	cfg.CreateTag = tagRelease
-	cfg.PushTag = pushTag
+	cfg := &gotagger.Config{
+		RemoteName:    g.remoteName,
+		CreateTag:     g.tagRelease,
+		PushTag:       g.pushTag,
+		VersionPrefix: g.versionPrefix,
+	}
 
 	latest, err := gotagger.TagRepo(cfg, r)
 	if err != nil {
-		errLogger.Println("error: ", err)
+		g.err.Println("error: ", err)
 		return genericErrorExitCode
 	}
-	outLogger.Println(latest)
+	g.out.Println(latest)
 	return successExitCode
 }
 
-func boolEnv(env string) bool {
-	env = "GOTAGGER_" + strings.ToUpper(env)
-	val := os.Getenv(env)
-	switch strings.ToLower(val) {
-	case "", "false", "0", "no":
-		return false
-	default:
-		return true
+func (g *GoTagger) boolEnv(env string, def bool) bool {
+	if val, ok := getEnv(env); ok {
+		b, err := strconv.ParseBool(val)
+		if err != nil {
+			// We use fatal here since we cannot return an error.
+			g.err.Fatalf("error: cannot parse GOTAGGER_%s as a boolean value: %v\n", strings.ToUpper(env), err)
+		}
+		return b
 	}
+
+	return def
+}
+
+func (g *GoTagger) stringEnv(env, def string) string {
+	if val, ok := getEnv(env); ok {
+		return val
+	}
+
+	return def
+}
+
+func getEnv(env string) (string, bool) {
+	env = "GOTAGGER_" + strings.ToUpper(env)
+	return os.LookupEnv(env)
 }
 
 const (
@@ -125,11 +150,11 @@ since that commit.
 `
 )
 
-func setUsage(l *log.Logger, fs *flag.FlagSet) {
+func (g *GoTagger) setUsage(fs *flag.FlagSet) {
 	fs.Usage = func() {
-		l.Printf(usagePrefix, AppName)
+		g.err.Printf(usagePrefix, AppName)
 		fs.PrintDefaults()
-		l.Print(usageSuffix)
+		g.err.Print(usageSuffix)
 	}
 }
 
