@@ -21,8 +21,8 @@ import (
 )
 
 const (
-	goMod      = "go.mod"
-	rootModule = "."
+	goMod          = "go.mod"
+	rootModulePath = "."
 )
 
 var (
@@ -63,8 +63,8 @@ type Config struct {
 //		origin
 //	- VersionPrefix
 //		v
-func NewDefaultConfig() *Config {
-	return &Config{
+func NewDefaultConfig() Config {
+	return Config{
 		RemoteName:    "origin",
 		VersionPrefix: "v",
 	}
@@ -99,11 +99,15 @@ func (g *Gotagger) SubmoduleVersion(s string) (string, error) {
 		return "", err
 	}
 
-	v, err := g.version(s, modules)
-	if err != nil {
-		return "", err
+	var submodule module
+	for _, m := range modules {
+		if s == m.name {
+			submodule = m
+			break
+		}
 	}
-	return versionRegex.ReplaceAllString(s, "") + "/" + g.Config.VersionPrefix + v.String(), nil
+
+	return g.version(submodule, modules)
 }
 
 // TagRepo determines what the curent version of the repository is by parsing
@@ -127,19 +131,39 @@ func (g *Gotagger) TagRepo() ([]string, error) {
 		return nil, err
 	}
 
+	// map module name to module
+	moduleNameMap := map[string]module{}
+	for _, m := range modules {
+		moduleNameMap[m.name] = m
+	}
+
 	cc := commit.Parse(head.Message)
 
-	var commitModules []string
+	var commitModules []module
 	for _, footer := range cc.Footers {
 		if footer.Title == "Modules" {
-			for _, module := range strings.Split(footer.Text, ",") {
-				commitModules = append(commitModules, strings.TrimSpace(module))
+			for _, moduleName := range strings.Split(footer.Text, ",") {
+				moduleName = strings.TrimSpace(moduleName)
+				m, ok := moduleNameMap[moduleName]
+				if !ok {
+					return nil, fmt.Errorf("no module %s found", moduleName)
+				}
+				commitModules = append(commitModules, m)
 			}
 		}
 	}
+
+	// default to the root module
 	if len(commitModules) == 0 {
-		// default to the root module
-		commitModules = []string{rootModule}
+		// find the root module, defaulting to the first module found
+		rootModule := modules[0]
+		for _, m := range modules {
+			if m.path == rootModulePath {
+				rootModule = m
+				break
+			}
+		}
+		commitModules = []module{rootModule}
 	}
 
 	// collect versions we need to create
@@ -149,35 +173,55 @@ func (g *Gotagger) TagRepo() ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		version := g.Config.VersionPrefix + v.String()
-		if module != rootModule {
-			version = versionRegex.ReplaceAllString(module, "") + "/" + version
-		}
-		versions = append(versions, version)
+		versions = append(versions, v)
 	}
 
-	// Create tags if this is a release commit
-	if cc.Type == commit.TypeRelease && g.Config.CreateTag {
-		tags := make([]*object.Tag, len(versions))
-		for i, ver := range versions {
-			tag, err := g.repo.CreateTag(head.Hash, ver, "")
-			if err != nil {
-				// clean up tags we already created
-				if terr := g.repo.DeleteTags(tags); terr != nil {
-					err = fmt.Errorf("%w\n%s", err, terr)
+	// if this is a release commit, then validate that modules are correct
+	if cc.Type == commit.TypeRelease {
+		// validate that the commit touches every module listed in the footer,
+		// and that no changes are to unlisted modules
+		stats, err := head.Stats()
+		if err != nil {
+			return nil, err
+		}
+
+		// generate a list of modules changed by this commit
+		var changedModules []module
+		for _, stat := range stats {
+			if mod, ok := isModuleFile(stat.Name, modules); ok {
+				changedModules = append(changedModules, mod)
+			}
+		}
+
+		// validate that the two lists are the same
+		if err := validateCommitModules(commitModules, changedModules); err != nil {
+			return nil, err
+		}
+
+		if g.Config.CreateTag {
+			// create tag
+			tags := make([]*object.Tag, len(versions))
+			for i, ver := range versions {
+				tag, err := g.repo.CreateTag(head.Hash, ver, "")
+				if err != nil {
+					// clean up tags we already created
+					if terr := g.repo.DeleteTags(tags); terr != nil {
+						err = fmt.Errorf("%w\n%s", err, terr)
+					}
+					return nil, err
 				}
-				return nil, err
+				tags[i] = tag
 			}
-			tags[i] = tag
-		}
 
-		// push tags
-		if g.Config.PushTag {
-			if err := g.repo.PushTags(tags, g.Config.RemoteName); err != nil {
-				return versions, err
+			// push tags
+			if g.Config.PushTag {
+				if err := g.repo.PushTags(tags, g.Config.RemoteName); err != nil {
+					return versions, err
+				}
 			}
 		}
 	}
+
 	return versions, nil
 }
 
@@ -188,33 +232,43 @@ func (g *Gotagger) Version() (string, error) {
 		return "", err
 	}
 
-	v, err := g.version(rootModule, modules)
-	if err != nil {
-		return "", err
+	// find root module, defaulting to first module in list
+	root := modules[0]
+	for _, m := range modules {
+		if m.path == rootModulePath {
+			root = m
+			break
+		}
 	}
-	return g.Config.VersionPrefix + v.String(), nil
+
+	return g.version(root, modules)
 }
 
-func (g *Gotagger) getLatest(prefix string) (latest *semver.Version, hash string, err error) {
-	// convert rootModule to empty string, otherwise add a trailing slash
-	if prefix == rootModule {
-		prefix = ""
-	} else if !strings.HasSuffix("/", prefix) {
-		prefix += "/"
+func (g *Gotagger) getLatest(m module) (latest *semver.Version, hash string, err error) {
+	// determine the major version prefix for this module by normalizing
+	// the version part of the name to 'X.'
+	major := strings.TrimPrefix(versionRegex.FindString(m.name), "/")
+	if major != "" {
+		major = strings.TrimPrefix(major, g.Config.VersionPrefix) + "."
 	}
 
-	tags, err := g.repo.Tags("HEAD", prefix+g.Config.VersionPrefix)
+	tags, err := g.repo.Tags("HEAD", m.prefix+g.Config.VersionPrefix)
 	if err == nil {
 		latest = &semver.Version{}
 		for _, t := range tags {
-			tver, err := semver.NewVersion(strings.TrimPrefix(t.Name().Short(), prefix))
-			if err == nil && latest.LessThan(tver) {
-				latest = tver
-				hash = t.Hash().String()
+			// filter out major versions greater than this module
+			tname := strings.TrimPrefix(t.Name().Short(), m.prefix)
+			if (major == "" && (strings.HasPrefix(tname, g.Config.VersionPrefix+"0.") || strings.HasPrefix(tname, g.Config.VersionPrefix+"1."))) ||
+				(major != "" && strings.HasPrefix(tname, g.Config.VersionPrefix+major)) {
+				if tver, err := semver.NewVersion(tname); err == nil && latest.LessThan(tver) {
+					hash = t.Hash().String()
+					latest = tver
+				}
 			}
 		}
 	}
-	return latest, hash, err
+
+	return
 }
 
 func (g *Gotagger) parseCommits(cs []*object.Commit) (ctype commit.Type, breaking bool) {
@@ -235,21 +289,30 @@ func (g *Gotagger) parseCommits(cs []*object.Commit) (ctype commit.Type, breakin
 	return ctype, breaking
 }
 
-func (g *Gotagger) version(submodule string, modules []module) (*semver.Version, error) {
-	mod, ok := checkSubmodule(g.repo.Path, submodule)
-	if !ok {
-		return nil, ErrNoSubmodule
+func (g *Gotagger) version(submodule module, modules []module) (string, error) {
+	var mod module
+	for _, m := range modules {
+		if submodule.name == m.name {
+			mod = m
+			break
+		}
 	}
 
-	latest, hash, err := g.getLatest(submodule)
+	// if we didn't match, exit
+	if mod.name == "" {
+		return "", ErrNoSubmodule
+	}
+
+	// get latest commit for this submodule
+	latest, hash, err := g.getLatest(mod)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	// Find the most significant change between HEAD and latest
 	commits, err := g.repo.RevList("HEAD", hash)
 	if err != nil {
-		return nil, fmt.Errorf("could not fetch commits HEAD..%s: %w", hash, err)
+		return "", fmt.Errorf("could not fetch commits HEAD..%s: %w", hash, err)
 	}
 
 	// group commits by modules and only keep the ones that match submodule
@@ -257,48 +320,37 @@ func (g *Gotagger) version(submodule string, modules []module) (*semver.Version,
 	commits = groups[mod]
 
 	// If this is the latest tagged commit, then return
-	if len(commits) == 0 {
-		return latest, nil
+	var version string
+	if len(commits) > 0 {
+		change, breaking := g.parseCommits(commits)
+		switch {
+		case breaking:
+			version = latest.IncMajor().String()
+		case change == commit.TypeFeature:
+			version = latest.IncMinor().String()
+		default:
+			version = latest.IncPatch().String()
+		}
+	} else {
+		version = latest.String()
 	}
 
-	change, breaking := g.parseCommits(commits)
-
-	var v semver.Version
-	switch {
-	case breaking:
-		v = latest.IncMajor()
-	case change == commit.TypeFeature:
-		v = latest.IncMinor()
-	default:
-		v = latest.IncPatch()
-	}
-
-	return &v, nil
+	return mod.prefix + g.Config.VersionPrefix + version, nil
 }
 
 var versionRegex = regexp.MustCompile(`/v\d+$`)
 
-func checkSubmodule(root, submodule string) (mod module, ok bool) {
-	data, err := ioutil.ReadFile(filepath.Join(root, submodule, "go.mod"))
-	if err == nil {
-		if mp := modfile.ModulePath(data); mp != "" {
-			mod.name = mp
-			mod.path = submodule
-			ok = true
-		}
-	}
-	return
-}
-
 type module struct {
-	path string
-	name string
+	path   string
+	name   string
+	prefix string
 }
 
 type sortByPath []module
 
 func (s sortByPath) Len() int      { return len(s) }
 func (s sortByPath) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+func (s sortByPath) Sort()         { sort.Sort(s) }
 func (s sortByPath) Less(i, j int) bool {
 	si, sj := s[i], s[j]
 	if len(si.path) < len(sj.path) {
@@ -332,26 +384,36 @@ func findAllModules(root string) (modules []module, err error) {
 			}
 
 			// ignore go.mods that don't parse a module path
-			if mp := modfile.ModulePath(data); mp != "" {
+			if modName := modfile.ModulePath(data); modName != "" {
 				modPath := filepath.Dir(relPath)
-				modules = append(modules, module{modPath, mp})
+
+				// convert rootModule to empty string, otherwise add a trailing slash
+				modPrefix := modPath
+				if modPrefix == rootModulePath {
+					modPrefix = ""
+				} else {
+					// determine the major version prefix for this module
+					major := strings.TrimPrefix(versionRegex.FindString(modName), "/")
+
+					// strip trailing major version directory from prefix
+					modPrefix = strings.TrimSuffix(modPrefix, major)
+					if modPrefix != "" && !strings.HasSuffix(modPrefix, "/") {
+						modPrefix += "/"
+					}
+				}
+
+				modules = append(modules, module{modPath, modName, modPrefix})
 			}
 		}
 
 		return nil
 	})
 
-	sort.Sort(sortByPath(modules))
+	sortByPath(modules).Sort()
 	return
 }
 
 func groupCommitsByModule(commits []*object.Commit, modules []module) (grouped map[module][]*object.Commit) {
-	// make map of module path to module for quicker lookup below
-	moduleMap := make(map[string]module)
-	for _, mod := range modules {
-		moduleMap[mod.path] = mod
-	}
-
 	grouped = make(map[module][]*object.Commit)
 	for _, commit := range commits {
 		stats, err := commit.Stats()
@@ -360,20 +422,78 @@ func groupCommitsByModule(commits []*object.Commit, modules []module) (grouped m
 		}
 
 		for _, stat := range stats {
-			for dir := filepath.Dir(stat.Name); ; dir = filepath.Dir(dir) {
-				if mod, ok := moduleMap[dir]; ok {
-					grouped[mod] = append(grouped[mod], commit)
-					break
-				}
-				// break out of the loop if we hit the root path
-				if dir == rootModule {
-					break
-				}
+			if mod, ok := isModuleFile(stat.Name, modules); ok {
+				grouped[mod] = append(grouped[mod], commit)
+				break
 			}
 		}
 	}
 
 	return
+}
+
+func isModuleFile(filename string, modules []module) (mod module, ok bool) {
+	// make map of module path to module for quicker lookup below
+	moduleMap := map[string]module{}
+	for _, m := range modules {
+		moduleMap[m.path] = m
+	}
+
+	for dir := filepath.Dir(filename); ; dir = filepath.Dir(dir) {
+		mod, ok = moduleMap[dir]
+		// break out of the loop if we found a module or hit the root path
+		if ok || dir == rootModulePath {
+			break
+		}
+	}
+
+	return
+}
+
+func validateCommitModules(commitModules, changedModules []module) (err error) {
+	// create a set of commit modules
+	commitMap := make(map[string]bool)
+	for _, m := range commitModules {
+		commitMap[m.name] = true
+	}
+
+	// create a set of changed modules
+	changedMap := make(map[string]bool)
+	for _, m := range changedModules {
+		changedMap[m.name] = true
+	}
+
+	var extra []string
+	for modName := range commitMap {
+		if _, ok := changedMap[modName]; !ok {
+			// this is extra
+			extra = append(extra, modName)
+		}
+	}
+	sort.StringSlice(extra).Sort()
+
+	var missing []string
+	for modName := range changedMap {
+		if _, ok := commitMap[modName]; !ok {
+			// this is missing
+			missing = append(missing, modName)
+		}
+	}
+	sort.StringSlice(missing).Sort()
+
+	var msg string
+	if len(extra) > 0 {
+		msg += "\nmodules not changed by commit: " + strings.Join(extra, ", ")
+	}
+	if len(missing) > 0 {
+		msg += "\nchanged modules not released by commit: " + strings.Join(missing, ", ")
+	}
+
+	if msg != "" {
+		err = errors.New("module validation failed:" + msg)
+	}
+
+	return err
 }
 
 // TagRepo determines what the curent version of the repository is by parsing the commit

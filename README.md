@@ -10,7 +10,7 @@
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 <!-- markdownlint-enable -->
-<!-- markdownlint-disable MD013 -->
+<!-- markdownlint-disable MD012 MD013 -->
 
 # gotagger
 
@@ -24,7 +24,7 @@ as part of a CI process.
 for the latest semantic version.
 This becomes the "base" version.
 Then `gotagger` examines all of the commit messages
-between the current commit and that tag,
+between the current commit and the latest tag,
 to determine if the most significant change was a
 feature,
 bug fix,
@@ -77,8 +77,7 @@ v0.4.0
 **Note**: The version reported may be different,
 depending on what unreleased changes exist.
 
-To tag a release, make any changes need to prepare your project for releasing
-(ie. update the change log, merge any feature branches).
+To tag a release, make any changes need to prepare your project for releasing (ie. update the change log, merge any feature branches).
 Then create a "release" commit and run gotagger again:
 
 ```bash
@@ -95,33 +94,33 @@ or any other post-release tasks.
 ### Go Submodule Support
 
 `gotagger` can also tag go submodules.
-To tag one ore more submodules,
-include a `Modules` footer in your commit message:
+To tag one or more submodules,
+include a `Modules` footer in your commit message
+containing a comma-separated list of modules to tag
 
 ```text
-release: my/submodule and my/other-module
+release: mymodule/submodule and mymodule/other-module
 
-Modules: my/submodule, my/other-module
+Modules: mymodule/submodule, mymodule/other-module
 ```
 
 You can also use multiple `Modules` footers if you prefer:
 
 ```text
-release: my/submodule and my/other-module
+release: mymodule/submodule and mymodule/other-module
 
-Modules: my/submodule
-Modules: my/other-module
+Modules: mymodule/submodule
+Modules: mymodule/other-module
 ```
 
-You can release the "main" module by using the "." character in the Modules list:
+To release the "root" module explicitly list it in the `Modules` footer:
 
 ```text
 release: foo and submodule bar
 
-Modules: bar
-Modules: .
+Modules: foo, foo/bar
 
-# "Modules: bar, ." also works
+# "Modules: foo/bar, foo" also works
 ```
 
 `gotagger` will print out all of the versions it tagged

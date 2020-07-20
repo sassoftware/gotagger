@@ -33,8 +33,7 @@ type Commit struct {
 // Repository represents a git repository.
 type Repository struct {
 	Path string
-
-	repo *git.Repository
+	Repo *git.Repository
 }
 
 // New returns a new git Repo. If path is not a git repo, then an error will be returned.
@@ -43,7 +42,7 @@ func New(path string) (*Repository, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Repository{Path: path, repo: r}, nil
+	return &Repository{Path: path, Repo: r}, nil
 }
 
 // CreateTag tags a commit in a git repo.
@@ -53,11 +52,11 @@ func (r *Repository) CreateTag(hash plumbing.Hash, name, message string) (*objec
 	if message == "" {
 		message = "Release " + name
 	}
-	cfg, err := r.repo.Config()
+	cfg, err := r.Repo.Config()
 	if err != nil {
 		return nil, err
 	}
-	ref, err := r.repo.CreateTag(name, hash, &git.CreateTagOptions{
+	ref, err := r.Repo.CreateTag(name, hash, &git.CreateTagOptions{
 		Message: message,
 		Tagger: &object.Signature{
 			Email: cfg.Raw.Section("user").Option("email"),
@@ -68,13 +67,13 @@ func (r *Repository) CreateTag(hash plumbing.Hash, name, message string) (*objec
 	if err != nil {
 		return nil, err
 	}
-	return r.repo.TagObject(ref.Hash())
+	return r.Repo.TagObject(ref.Hash())
 }
 
 func (r *Repository) DeleteTags(tags []*object.Tag) error {
 	var errorMsg string
 	for _, tag := range tags {
-		if terr := r.repo.DeleteTag(tag.Name); terr != nil {
+		if terr := r.Repo.DeleteTag(tag.Name); terr != nil {
 			if errorMsg == "" {
 				errorMsg = "could not delete tags:"
 			}
@@ -89,11 +88,11 @@ func (r *Repository) DeleteTags(tags []*object.Tag) error {
 
 // Head returns the commit at HEAD
 func (r *Repository) Head() (*object.Commit, error) {
-	ref, err := r.repo.Head()
+	ref, err := r.Repo.Head()
 	if err != nil {
 		return nil, err
 	}
-	return r.repo.CommitObject(ref.Hash())
+	return r.Repo.CommitObject(ref.Hash())
 }
 
 // PushTag pushes tag to remote.
@@ -108,7 +107,7 @@ func (r *Repository) PushTags(tags []*object.Tag, remote string) error {
 		refname := "refs/tags/" + tag.Name
 		refSpecs[i] = config.RefSpec(refname + ":" + refname)
 	}
-	return r.repo.Push(&git.PushOptions{
+	return r.Repo.Push(&git.PushOptions{
 		RemoteName: remote,
 		RefSpecs:   refSpecs,
 	})
@@ -127,7 +126,7 @@ func (r *Repository) RevList(s, e string, paths ...string) ([]*object.Commit, er
 	if err != nil {
 		return nil, err
 	}
-	cIter, err := r.repo.Log(&git.LogOptions{
+	cIter, err := r.Repo.Log(&git.LogOptions{
 		From:       start,
 		PathFilter: matchPaths(paths),
 	})
@@ -161,12 +160,12 @@ func (r *Repository) Tags(rev string, prefixes ...string) (tags []*plumbing.Refe
 		return nil, err
 	}
 
-	c, err := r.repo.CommitObject(h)
+	c, err := r.Repo.CommitObject(h)
 	if err != nil {
 		return nil, err
 	}
 
-	tIter, err := r.repo.Tags()
+	tIter, err := r.Repo.Tags()
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +173,7 @@ func (r *Repository) Tags(rev string, prefixes ...string) (tags []*plumbing.Refe
 	if err := tIter.ForEach(func(ref *plumbing.Reference) error {
 		// resolve tag to commit
 		var tc *object.Commit
-		t, err := r.repo.TagObject(ref.Hash())
+		t, err := r.Repo.TagObject(ref.Hash())
 		switch err {
 		case nil:
 			// annotated tag
@@ -184,7 +183,7 @@ func (r *Repository) Tags(rev string, prefixes ...string) (tags []*plumbing.Refe
 			}
 		case plumbing.ErrObjectNotFound:
 			// light weight tag
-			tc, err = r.repo.CommitObject(ref.Hash())
+			tc, err = r.Repo.CommitObject(ref.Hash())
 			if err != nil {
 				return err
 			}
@@ -222,7 +221,7 @@ func (r *Repository) Tags(rev string, prefixes ...string) (tags []*plumbing.Refe
 
 func (r *Repository) parseRevOrHash(s string) (plumbing.Hash, error) {
 	if s != "" {
-		if i, err := r.repo.ResolveRevision(plumbing.Revision(s)); err == nil {
+		if i, err := r.Repo.ResolveRevision(plumbing.Revision(s)); err == nil {
 			return *i, err
 		}
 	}

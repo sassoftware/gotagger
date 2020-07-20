@@ -26,26 +26,40 @@ type T interface {
 	Log(args ...interface{})
 }
 
+type FileCommit struct {
+	Path     string
+	Contents []byte
+}
+
 func CommitFile(t T, repo *git.Repository, path, filename, message string, data []byte) plumbing.Hash {
 	t.Helper()
 
-	fname := filepath.Join(path, filename)
+	return CommitFiles(t, repo, path, message, []FileCommit{{Path: filename, Contents: data}})
+}
 
-	if err := os.MkdirAll(filepath.Dir(fname), 0700); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := ioutil.WriteFile(fname, data, 0600); err != nil {
-		t.Fatal(err)
-	}
+func CommitFiles(t T, repo *git.Repository, path, message string, files []FileCommit) plumbing.Hash {
+	t.Helper()
 
 	w, err := repo.Worktree()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := w.Add(filename); err != nil {
-		t.Fatal(err)
+	// create files
+	for _, file := range files {
+		fname := filepath.Join(path, file.Path)
+
+		if err := os.MkdirAll(filepath.Dir(fname), 0700); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := ioutil.WriteFile(fname, file.Contents, 0600); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := w.Add(file.Path); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	h, err := w.Commit(message, &git.CommitOptions{
@@ -171,19 +185,7 @@ func TempDir(t T) (tmpdir string, teardown func()) {
 		t.Fatal(err)
 	}
 
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := os.Chdir(tmpdir); err != nil {
-		t.Fatal(err)
-	}
-
 	teardown = func() {
-		if err := os.Chdir(wd); err != nil {
-			t.Log(err)
-		}
 		if err := os.RemoveAll(tmpdir); err != nil {
 			t.Log(err)
 		}
