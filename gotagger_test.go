@@ -9,6 +9,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	sgit "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/stretchr/testify/assert"
 	"sassoftware.io/clis/gotagger/internal/testutils"
 )
 
@@ -237,12 +238,14 @@ func Test_findAllModules(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.title, func(t *testing.T) {
+			t.Parallel()
+
 			repo, path, teardwon := testutils.NewGitRepo(t)
 			defer teardwon()
 
 			tt.repoFunc(t, repo, path)
 
-			modules, err := findAllModules()
+			modules, err := findAllModules(path)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -329,12 +332,14 @@ func Test_groupCommitsByModule(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.title, func(t *testing.T) {
+			t.Parallel()
+
 			g, repo, path, teardwon := newGotagger(t)
 			defer teardwon()
 
 			tt.repoFunc(t, repo, path)
 
-			modules, err := findAllModules()
+			modules, err := findAllModules(path)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -355,9 +360,7 @@ func Test_groupCommitsByModule(t *testing.T) {
 				}
 				got[module] = messages
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("groupCommitsByModule returned\n%s\nwant\n%s", spew.Sdump(got), spew.Sdump(tt.want))
-			}
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

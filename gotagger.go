@@ -94,7 +94,7 @@ func New(path string) (*Gotagger, error) {
 
 // SubmoduleVersion returns the current release version for submodule s.
 func (g *Gotagger) SubmoduleVersion(s string) (string, error) {
-	modules, err := findAllModules()
+	modules, err := findAllModules(g.repo.Path)
 	if err != nil {
 		return "", err
 	}
@@ -122,7 +122,7 @@ func (g *Gotagger) TagRepo() ([]string, error) {
 	}
 
 	// get all modules
-	modules, err := findAllModules()
+	modules, err := findAllModules(g.repo.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +183,7 @@ func (g *Gotagger) TagRepo() ([]string, error) {
 
 // Version returns the current release version for the main module.
 func (g *Gotagger) Version() (string, error) {
-	modules, err := findAllModules()
+	modules, err := findAllModules(g.repo.Path)
 	if err != nil {
 		return "", err
 	}
@@ -236,7 +236,7 @@ func (g *Gotagger) parseCommits(cs []*object.Commit) (ctype commit.Type, breakin
 }
 
 func (g *Gotagger) version(submodule string, modules []module) (*semver.Version, error) {
-	mod, ok := checkSubmodule(submodule)
+	mod, ok := checkSubmodule(g.repo.Path, submodule)
 	if !ok {
 		return nil, ErrNoSubmodule
 	}
@@ -278,8 +278,8 @@ func (g *Gotagger) version(submodule string, modules []module) (*semver.Version,
 
 var versionRegex = regexp.MustCompile(`/v\d+$`)
 
-func checkSubmodule(submodule string) (mod module, ok bool) {
-	data, err := ioutil.ReadFile(filepath.Join(submodule, "go.mod"))
+func checkSubmodule(root, submodule string) (mod module, ok bool) {
+	data, err := ioutil.ReadFile(filepath.Join(root, submodule, "go.mod"))
 	if err == nil {
 		if mp := modfile.ModulePath(data); mp != "" {
 			mod.name = mp
@@ -307,8 +307,7 @@ func (s sortByPath) Less(i, j int) bool {
 	return si.path < sj.path
 }
 
-func findAllModules() (modules []module, err error) {
-	root := "."
+func findAllModules(root string) (modules []module, err error) {
 	err = filepath.Walk(root, func(pth string, info os.FileInfo, err error) error {
 		// bail on errors
 		if err != nil {
@@ -325,16 +324,16 @@ func findAllModules() (modules []module, err error) {
 		}
 
 		// add the directory leading up to any valid go.mod
-		relPath := filepath.Join(root, pth)
-		if strings.HasSuffix(relPath, "/"+goMod) || relPath == goMod {
-			data, err := ioutil.ReadFile(relPath)
+		relPath := strings.TrimPrefix(pth, root+string(filepath.Separator))
+		if strings.HasSuffix(relPath, string(filepath.Separator)+goMod) || relPath == goMod {
+			data, err := ioutil.ReadFile(pth)
 			if err != nil {
 				return err
 			}
 
 			// ignore go.mods that don't parse a module path
 			if mp := modfile.ModulePath(data); mp != "" {
-				modPath := filepath.Dir(pth)
+				modPath := filepath.Dir(relPath)
 				modules = append(modules, module{modPath, mp})
 			}
 		}
