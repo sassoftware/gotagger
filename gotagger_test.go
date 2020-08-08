@@ -575,6 +575,32 @@ func TestGotagger_Version_tag_head(t *testing.T) {
 	}
 }
 
+func TestGotagger_Version_PreMajor(t *testing.T) {
+	g, repo, path, teardown := newGotagger(t)
+	defer teardown()
+
+	// set PreMajor
+	g.Config.PreMajor = true
+
+	simpleGitRepo(t, repo, path)
+
+	// make a breaking change to foo
+	testutils.CommitFile(t, repo, path, "foo.go", "feat!: breaking change", []byte(`contents`))
+
+	// major version should rev
+	if v, err := g.SubmoduleVersion("foo"); assert.NoError(t, err) {
+		assert.Equal(t, "v2.0.0", v)
+	}
+
+	// make a breaking change to sub/module
+	testutils.CommitFile(t, repo, path, filepath.Join("sub", "module", "file"), "feat!: breaking change", []byte(`contents`))
+
+	// version should not rev major
+	if v, err := g.SubmoduleVersion("foo/sub/module"); assert.NoError(t, err) {
+		assert.Equal(t, "sub/module/v0.2.0", v)
+	}
+}
+
 func TestGotagger_Version_breaking(t *testing.T) {
 	g, repo, path, teardown := newGotagger(t)
 	defer teardown()

@@ -36,6 +36,10 @@ type Config struct {
 	// RemoteName represents the name of the remote repository. Defaults to origin.
 	RemoteName string
 
+	// PreMajor controls whether gotagger will increase the major version from 0
+	// to 1 for breaking changes.
+	PreMajor bool
+
 	// PushTag represents whether to push the tag to the remote git repository.
 	PushTag bool
 
@@ -323,6 +327,10 @@ func (g *Gotagger) version(submodule module, modules []module) (string, error) {
 	var version string
 	if len(commits) > 0 {
 		change, breaking := g.parseCommits(commits)
+		// set breaking false if this is a 0.x.y version and PreMajor is set
+		if g.Config.PreMajor && latest.Major() == 0 {
+			breaking = false
+		}
 		switch {
 		case breaking:
 			version = latest.IncMajor().String()
