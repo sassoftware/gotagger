@@ -636,11 +636,12 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func Test_findAllModules(t *testing.T) {
+func TestGotagger_findAllModules(t *testing.T) {
 	tests := []struct {
 		title    string
 		repoFunc func(testutils.T, *sgit.Repository, string)
 		include  []string
+		exclude  []string
 		want     []module
 	}{
 		{
@@ -657,6 +658,35 @@ func Test_findAllModules(t *testing.T) {
 			want: []module{
 				{".", "foo", ""},
 				{"bar", "foo/bar", "bar/"},
+			},
+		},
+		{
+			title:    "v1 on master branch, exclude foo",
+			repoFunc: masterV1GitRepo,
+			exclude:  []string{"foo"},
+			want: []module{
+				{"bar", "foo/bar", "bar/"},
+			},
+		},
+		{
+			title:    "v1 on master branch, exclude all by path",
+			repoFunc: masterV1GitRepo,
+			exclude:  []string{"."},
+		},
+		{
+			title:    "v1 on master branch, exclude foo/bar",
+			repoFunc: masterV1GitRepo,
+			exclude:  []string{"foo/bar"},
+			want: []module{
+				{".", "foo", ""},
+			},
+		},
+		{
+			title:    "v1 on master branch, exclude foo/bar by path",
+			repoFunc: masterV1GitRepo,
+			exclude:  []string{"bar"},
+			want: []module{
+				{".", "foo", ""},
 			},
 		},
 		{
@@ -685,7 +715,7 @@ func Test_findAllModules(t *testing.T) {
 			},
 		},
 		{
-			title:    "v1 on master branch, exclude all",
+			title:    "v1 on master branch, include none",
 			repoFunc: masterV1GitRepo,
 			include:  []string{"foz"},
 		},
@@ -710,15 +740,18 @@ func Test_findAllModules(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
+
 		t.Run(tt.title, func(t *testing.T) {
 			t.Parallel()
 
-			repo, path, teardwon := testutils.NewGitRepo(t)
-			defer teardwon()
+			g, repo, path, teardown := newGotagger(t)
+			defer teardown()
 
 			tt.repoFunc(t, repo, path)
 
-			if modules, err := findAllModules(path, tt.include); assert.NoError(t, err) {
+			g.Config.ExcludeModules = tt.exclude
+			if modules, err := g.findAllModules(tt.include); assert.NoError(t, err) {
 				assert.Equal(t, tt.want, modules)
 			}
 		})
@@ -798,12 +831,12 @@ func Test_groupCommitsByModule(t *testing.T) {
 		t.Run(tt.title, func(t *testing.T) {
 			t.Parallel()
 
-			g, repo, path, teardwon := newGotagger(t)
-			defer teardwon()
+			g, repo, path, teardown := newGotagger(t)
+			defer teardown()
 
 			tt.repoFunc(t, repo, path)
 
-			modules, err := findAllModules(path, nil)
+			modules, err := g.findAllModules(nil)
 			require.NoError(t, err)
 
 			commits, err := g.repo.RevList("HEAD", "")

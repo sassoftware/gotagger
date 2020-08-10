@@ -32,6 +32,12 @@ var (
 // Config represents how to tag a repo. If not default is mentioned, the option defaults
 // to go's zero-value.
 type Config struct {
+	// CreateTag represents whether to create the tag.
+	CreateTag bool
+
+	// ExcludeModules is a list of module names or paths to exclude.
+	ExcludeModules []string
+
 	// RemoteName represents the name of the remote repository. Defaults to origin.
 	RemoteName string
 
@@ -41,9 +47,6 @@ type Config struct {
 
 	// PushTag represents whether to push the tag to the remote git repository.
 	PushTag bool
-
-	// CreateTag represents whether to create the tag.
-	CreateTag bool
 
 	// VersionPrefix is a string that will be added to the front of the version. Defaults to 'v'.
 	VersionPrefix string
@@ -100,7 +103,7 @@ func New(path string) (*Gotagger, error) {
 // If HEAD is a release commit, then every module referenced by the commit
 // message must contain at least one file with changes in the commit.
 func (g *Gotagger) ModuleVersions(names ...string) ([]string, error) {
-	modules, err := findAllModules(g.repo.Path, names)
+	modules, err := g.findAllModules(names)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +184,7 @@ func (g *Gotagger) TagRepo() ([]string, error) {
 // In a repository that contains multiple go modules, this returns the version
 // of the first module found by a depth-first, lexicographical search.
 func (g *Gotagger) Version() (string, error) {
-	modules, err := findAllModules(g.repo.Path, nil)
+	modules, err := g.findAllModules(nil)
 	if err != nil {
 		return "", err
 	}
@@ -197,6 +200,101 @@ func (g *Gotagger) Version() (string, error) {
 	}
 
 	return versions[0], nil
+}
+
+func (g *Gotagger) findAllModules(include []string) (modules []module, err error) {
+	// either return all modules, or only explicitly included modules
+	modinclude := map[string]bool{}
+	for _, name := range include {
+		modinclude[name] = true
+	}
+
+	// ignore these modules
+	modexclude := map[string]bool{}
+	for _, name := range g.Config.ExcludeModules {
+		modexclude[name] = true
+	}
+
+	pathexclude := make([]string, len(g.Config.ExcludeModules))
+	for i, exclude := range g.Config.ExcludeModules {
+		pathexclude[i] = normalizePath(exclude)
+	}
+
+	// walk root and find all modules
+	err = filepath.Walk(g.repo.Path, func(pth string, info os.FileInfo, err error) error {
+		// bail on errors
+		if err != nil {
+			return err
+		}
+
+		// ignore directories
+		if info.IsDir() {
+			// don't recurse into directories that start with '.', '_', or are named 'testdata'
+			dirname := info.Name()
+			if strings.HasPrefix(dirname, ".") || strings.HasPrefix(dirname, "_") || dirname == "testdata" {
+				return filepath.SkipDir
+			}
+
+			return nil
+		}
+
+		// add the directory leading up to any valid go.mod
+		relPath := strings.TrimPrefix(pth, g.repo.Path+string(filepath.Separator))
+		if strings.HasSuffix(relPath, string(filepath.Separator)+goMod) || relPath == goMod {
+			data, err := ioutil.ReadFile(pth)
+			if err != nil {
+				return err
+			}
+
+			// ignore go.mods that don't parse a module path
+			if modName := modfile.ModulePath(data); modName != "" {
+				modPath := filepath.Dir(relPath)
+
+				// ignore module if it is not an included one
+				if _, include := modinclude[modName]; !include && len(modinclude) > 0 {
+					return nil
+				}
+
+				// ingore module if it is excluded by name
+				if _, excludeName := modexclude[modName]; excludeName {
+					// ignore this module
+					return nil
+				}
+
+				// normalize module path to ease comparisons
+				normPath := normalizePath(modPath)
+
+				// see if an exclude is a prefix of normPath
+				for _, exclude := range pathexclude {
+					if strings.HasPrefix(normPath, exclude) {
+						return nil
+					}
+				}
+
+				// convert rootModule to empty string, otherwise add a trailing slash
+				modPrefix := modPath
+				if modPrefix == rootModulePath {
+					modPrefix = ""
+				} else {
+					// determine the major version prefix for this module
+					major := strings.TrimPrefix(versionRegex.FindString(modName), "/")
+
+					// strip trailing major version directory from prefix
+					modPrefix = strings.TrimSuffix(modPrefix, major)
+					if modPrefix != "" && !strings.HasSuffix(modPrefix, "/") {
+						modPrefix += "/"
+					}
+				}
+
+				modules = append(modules, module{modPath, modName, modPrefix})
+			}
+		}
+
+		return nil
+	})
+
+	sortByPath(modules).Sort()
+	return
 }
 
 func (g *Gotagger) getLatest(m module) (latest *semver.Version, hash string, err error) {
@@ -245,10 +343,18 @@ func (g *Gotagger) parseCommits(cs []*object.Commit) (ctype commit.Type, breakin
 }
 
 func (g *Gotagger) validateCommit(head *object.Commit) (commit.Commit, []module, error) {
+	// parse HEAD's commit message
+	cc := commit.Parse(head.Message)
+
 	// get all modules
-	modules, err := findAllModules(g.repo.Path, nil)
+	modules, err := g.findAllModules(nil)
 	if err != nil {
 		return commit.Commit{}, nil, err
+	}
+
+	// if no modules were found, then skip validation
+	if len(modules) == 0 {
+		return cc, nil, nil
 	}
 
 	// map module name to module
@@ -256,9 +362,6 @@ func (g *Gotagger) validateCommit(head *object.Commit) (commit.Commit, []module,
 	for _, m := range modules {
 		moduleNameMap[m.name] = m
 	}
-
-	// parse HEAD's commit message
-	cc := commit.Parse(head.Message)
 
 	// extract modules from Modules footers
 	var commitModules []module
@@ -275,7 +378,7 @@ func (g *Gotagger) validateCommit(head *object.Commit) (commit.Commit, []module,
 		}
 	}
 
-	// default to the root module
+	// default to the root module, or the first module found
 	if len(commitModules) == 0 {
 		// find the root module, defaulting to the first module found
 		rootModule := modules[0]
@@ -381,72 +484,6 @@ func (s sortByPath) Less(i, j int) bool {
 	return si.path < sj.path
 }
 
-func findAllModules(root string, include []string) (modules []module, err error) {
-	// either return all modules, or only explicitly included modules
-	modfilter := map[string]bool{}
-	for _, name := range include {
-		modfilter[name] = true
-	}
-
-	// walk root and find all modules
-	err = filepath.Walk(root, func(pth string, info os.FileInfo, err error) error {
-		// bail on errors
-		if err != nil {
-			return err
-		}
-
-		// ignore directories
-		if info.IsDir() {
-			// don't recurse into the .git directory
-			if strings.HasSuffix(info.Name(), ".git") {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-
-		// add the directory leading up to any valid go.mod
-		relPath := strings.TrimPrefix(pth, root+string(filepath.Separator))
-		if strings.HasSuffix(relPath, string(filepath.Separator)+goMod) || relPath == goMod {
-			data, err := ioutil.ReadFile(pth)
-			if err != nil {
-				return err
-			}
-
-			// ignore go.mods that don't parse a module path
-			if modName := modfile.ModulePath(data); modName != "" {
-				if _, ok := modfilter[modName]; !ok && len(modfilter) > 0 {
-					// ignore this module
-					return nil
-				}
-
-				modPath := filepath.Dir(relPath)
-
-				// convert rootModule to empty string, otherwise add a trailing slash
-				modPrefix := modPath
-				if modPrefix == rootModulePath {
-					modPrefix = ""
-				} else {
-					// determine the major version prefix for this module
-					major := strings.TrimPrefix(versionRegex.FindString(modName), "/")
-
-					// strip trailing major version directory from prefix
-					modPrefix = strings.TrimSuffix(modPrefix, major)
-					if modPrefix != "" && !strings.HasSuffix(modPrefix, "/") {
-						modPrefix += "/"
-					}
-				}
-
-				modules = append(modules, module{modPath, modName, modPrefix})
-			}
-		}
-
-		return nil
-	})
-
-	sortByPath(modules).Sort()
-	return
-}
-
 func groupCommitsByModule(commits []*object.Commit, modules []module) (grouped map[module][]*object.Commit) {
 	grouped = make(map[module][]*object.Commit)
 	for _, commit := range commits {
@@ -482,6 +519,23 @@ func isModuleFile(filename string, modules []module) (mod module, ok bool) {
 	}
 
 	return
+}
+
+func normalizePath(p string) string {
+	// normalize to /
+	p = filepath.ToSlash(p)
+
+	// ensure leading "./"
+	if !strings.HasPrefix(p, "./") && p != "." {
+		p = "./" + p
+	}
+
+	// ensure trailing /
+	if !strings.HasSuffix(p, "/") {
+		p += "/"
+	}
+
+	return p
 }
 
 func validateCommitModules(commitModules, changedModules []module) (err error) {

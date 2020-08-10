@@ -151,6 +151,9 @@ if err != nil {
 }
 fmt.Println("version:", version)
 
+// Uncomment this to ignore the module example.com/bar or any modules under some/path
+// g.Config.ExcludeModules = []string{"example.com/bar", "some/path"}
+
 // get the version of module foo
 fooVersion, err := g.ModuleVersion("foo")
 if err != nil {
