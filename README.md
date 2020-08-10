@@ -5,7 +5,7 @@
 
 - [gotagger](#gotagger)
     - [Usage](#usage)
-        - [Go Submodule Support](#go-submodule-support)
+        - [Go Module Support](#go-module-support)
     - [Using gotagger as a library](#using-gotagger-as-a-library)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -36,7 +36,7 @@ and print the new version.
 If the current commit type is `release`
 and the `-release` flag
 or `GOTAGGER_RELEASE` environment variable is set,
-then gotagger will tag the current commit with the new version.
+then `gotagger` will tag the current commit with the new version.
 If there are no commits explicitly marked as a feature or a bug fix,
 then the patch version is incremented.
 
@@ -77,7 +77,10 @@ v0.4.0
 **Note**: The version reported may be different,
 depending on what unreleased changes exist.
 
-To tag a release, make any changes need to prepare your project for releasing (ie. update the change log, merge any feature branches).
+To tag a release,
+make any changes need to prepare your project for releasing
+(ie. update the change log,
+merge any feature branches).
 Then create a "release" commit and run gotagger again:
 
 ```bash
@@ -91,32 +94,32 @@ push the tag to your central git repository,
 or any other post-release tasks.
 
 
-### Go Submodule Support
+### Go Module Support
 
-`gotagger` can also tag go submodules.
-To tag one or more submodules,
+`gotagger` can also tag go multi-module repositories.
+To tag one ore more modules,
 include a `Modules` footer in your commit message
-containing a comma-separated list of modules to tag
+containing a comma-separated list of modules to tag:
 
 ```text
-release: mymodule/submodule and mymodule/other-module
+release:  the bar and baz modules
 
-Modules: mymodule/submodule, mymodule/other-module
+Modules: foo/bar, foo/baz
 ```
 
 You can also use multiple `Modules` footers if you prefer:
 
 ```text
-release: mymodule/submodule and mymodule/other-module
+release: the bar and baz modules in separate footers
 
-Modules: mymodule/submodule
-Modules: mymodule/other-module
+Modules: foo/bar
+Modules: foo/baz
 ```
 
 To release the "root" module explicitly list it in the `Modules` footer:
 
 ```text
-release: foo and submodule bar
+release: foo and bar
 
 Modules: foo, foo/bar
 
@@ -141,15 +144,15 @@ if err != nil {
     return err
 }
 
-// get the current version of the main module
+// get the current version of a repository
 version, err := g.Version()
 if err != nil {
     return err
 }
 fmt.Println("version:", version)
 
-// get the version of submodule foo
-fooVersion, err := g.SubmoduleVersion("foo")
+// get the version of module foo
+fooVersion, err := g.ModuleVersion("foo")
 if err != nil {
     return err
 }

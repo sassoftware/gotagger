@@ -13,7 +13,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"golang.org/x/mod/modfile"
-	"sassoftware.io/clis/gotagger/git"
 	ggit "sassoftware.io/clis/gotagger/git"
 	"sassoftware.io/clis/gotagger/internal/commit"
 	igit "sassoftware.io/clis/gotagger/internal/git"
@@ -27,7 +26,7 @@ const (
 
 var (
 	ErrNoSubmodule = errors.New("no submodule found")
-	ErrNotRelease  = errors.New("HEAD is not a releaes commit")
+	ErrNotRelease  = errors.New("HEAD is not a release commit")
 )
 
 // Config represents how to tag a repo. If not default is mentioned, the option defaults
@@ -86,142 +85,90 @@ func New(path string) (*Gotagger, error) {
 		return nil, err
 	}
 
-	g := &Gotagger{
-		Config: Config{
-			RemoteName:    "origin",
-			VersionPrefix: "v",
-		},
-		repo: r,
-	}
-	return g, nil
+	return &Gotagger{Config: NewDefaultConfig(), repo: r}, nil
 }
 
-// SubmoduleVersion returns the current release version for submodule s.
-func (g *Gotagger) SubmoduleVersion(s string) (string, error) {
-	modules, err := findAllModules(g.repo.Path)
-	if err != nil {
-		return "", err
-	}
-
-	var submodule module
-	for _, m := range modules {
-		if s == m.name {
-			submodule = m
-			break
-		}
-	}
-
-	return g.version(submodule, modules)
-}
-
-// TagRepo determines what the curent version of the repository is by parsing
-// the commit history since previous release and returns that version. Depending
-// on the state of the Config passed it, it may also create the tag and push it.
+// ModuleVersions returns the current version for all go modules in the repository
+// in the order they were found by a depth-first, lexicographically sorted search.
 //
-// If the current commit contains one or more Modules footers, then tags are
-// created for each module listed. In this case, unless the root module is
-// explicitly included via the special module name "." then it will not be
-// tagged.
-func (g *Gotagger) TagRepo() ([]string, error) {
-	// ensure HEAD is a release commit
+// For example, in a repository with a root go.mod and a submodule foo/bar, the
+// slice returned would be: []string{"v0.1.0", "bar/v0.1.0"}
+//
+// If module names are passed in, then only the versions for those modules are
+// returned.
+//
+// If HEAD is a release commit, then every module referenced by the commit
+// message must contain at least one file with changes in the commit.
+func (g *Gotagger) ModuleVersions(names ...string) ([]string, error) {
+	modules, err := findAllModules(g.repo.Path, names)
+	if err != nil {
+		return nil, err
+	}
+
 	head, err := g.repo.Head()
 	if err != nil {
 		return nil, err
 	}
 
-	// get all modules
-	modules, err := findAllModules(g.repo.Path)
+	if _, _, err := g.validateCommit(head); err != nil {
+		return nil, err
+	}
+
+	return g.versions(modules)
+}
+
+// TagRepo determines the curent version of the repository by parsing the commit
+// history since the previous release and returns that version. Depending
+// on the CreateTag and PushTag configuration options tags may be created and
+// pushed.
+//
+// If the current commit contains one or more Modules footers, then tags are
+// created for each module listed. In this case if the root module is not
+// explicitly included in a Modules footer then it will not be included.
+func (g *Gotagger) TagRepo() ([]string, error) {
+	head, err := g.repo.Head()
 	if err != nil {
 		return nil, err
 	}
 
-	// map module name to module
-	moduleNameMap := map[string]module{}
-	for _, m := range modules {
-		moduleNameMap[m.name] = m
-	}
-
-	cc := commit.Parse(head.Message)
-
-	var commitModules []module
-	for _, footer := range cc.Footers {
-		if footer.Title == "Modules" {
-			for _, moduleName := range strings.Split(footer.Text, ",") {
-				moduleName = strings.TrimSpace(moduleName)
-				m, ok := moduleNameMap[moduleName]
-				if !ok {
-					return nil, fmt.Errorf("no module %s found", moduleName)
-				}
-				commitModules = append(commitModules, m)
-			}
-		}
-	}
-
-	// default to the root module
-	if len(commitModules) == 0 {
-		// find the root module, defaulting to the first module found
-		rootModule := modules[0]
-		for _, m := range modules {
-			if m.path == rootModulePath {
-				rootModule = m
-				break
-			}
-		}
-		commitModules = []module{rootModule}
+	// validate that if this is a release commit it is correct
+	cc, modules, err := g.validateCommit(head)
+	if err != nil {
+		return nil, err
 	}
 
 	// collect versions we need to create
-	var versions []string
-	for _, module := range commitModules {
-		v, err := g.version(module, modules)
-		if err != nil {
-			return nil, err
-		}
-		versions = append(versions, v)
+	versions, err := g.versions(modules)
+	if err != nil {
+		return nil, err
 	}
 
 	// if this is a release commit, then validate that modules are correct
-	if cc.Type == commit.TypeRelease {
-		// validate that the commit touches every module listed in the footer,
-		// and that no changes are to unlisted modules
-		stats, err := head.Stats()
-		if err != nil {
-			return nil, err
-		}
-
-		// generate a list of modules changed by this commit
-		var changedModules []module
-		for _, stat := range stats {
-			if mod, ok := isModuleFile(stat.Name, modules); ok {
-				changedModules = append(changedModules, mod)
-			}
-		}
-
-		// validate that the two lists are the same
-		if err := validateCommitModules(commitModules, changedModules); err != nil {
-			return nil, err
-		}
-
-		if g.Config.CreateTag {
-			// create tag
-			tags := make([]*object.Tag, len(versions))
-			for i, ver := range versions {
-				tag, err := g.repo.CreateTag(head.Hash, ver, "")
-				if err != nil {
-					// clean up tags we already created
-					if terr := g.repo.DeleteTags(tags); terr != nil {
-						err = fmt.Errorf("%w\n%s", err, terr)
-					}
-					return nil, err
+	if cc.Type == commit.TypeRelease && g.Config.CreateTag {
+		// create tag
+		tags := make([]*object.Tag, len(versions))
+		for i, ver := range versions {
+			tag, err := g.repo.CreateTag(head.Hash, ver, "")
+			if err != nil {
+				// clean up tags we already created
+				if terr := g.repo.DeleteTags(tags); terr != nil {
+					err = fmt.Errorf("%w\n%s", err, terr)
 				}
-				tags[i] = tag
+				return nil, err
 			}
+			tags[i] = tag
+		}
 
-			// push tags
-			if g.Config.PushTag {
-				if err := g.repo.PushTags(tags, g.Config.RemoteName); err != nil {
-					return versions, err
+		// push tags
+		if g.Config.PushTag {
+			if err := g.repo.PushTags(tags, g.Config.RemoteName); err != nil {
+				// currently pushes are not atomic so some of the tags may be
+				// pushed while others fail. we delete all of the local tags to
+				// be safe
+				if terr := g.repo.DeleteTags(tags); terr != nil {
+					err = fmt.Errorf("%w\n%s", err, terr)
 				}
+				return nil, err
 			}
 		}
 	}
@@ -229,23 +176,27 @@ func (g *Gotagger) TagRepo() ([]string, error) {
 	return versions, nil
 }
 
-// Version returns the current release version for the main module.
+// Version returns the current version for the repository.
+//
+// In a repository that contains multiple go modules, this returns the version
+// of the first module found by a depth-first, lexicographical search.
 func (g *Gotagger) Version() (string, error) {
-	modules, err := findAllModules(g.repo.Path)
+	modules, err := findAllModules(g.repo.Path, nil)
 	if err != nil {
 		return "", err
 	}
 
-	// find root module, defaulting to first module in list
-	root := modules[0]
-	for _, m := range modules {
-		if m.path == rootModulePath {
-			root = m
-			break
-		}
+	// only calculate the version of the first module found
+	if len(modules) > 0 {
+		modules = modules[:0]
 	}
 
-	return g.version(root, modules)
+	versions, err := g.versions(modules)
+	if err != nil {
+		return "", err
+	}
+
+	return versions[0], nil
 }
 
 func (g *Gotagger) getLatest(m module) (latest *semver.Version, hash string, err error) {
@@ -293,57 +244,120 @@ func (g *Gotagger) parseCommits(cs []*object.Commit) (ctype commit.Type, breakin
 	return ctype, breaking
 }
 
-func (g *Gotagger) version(submodule module, modules []module) (string, error) {
-	var mod module
+func (g *Gotagger) validateCommit(head *object.Commit) (commit.Commit, []module, error) {
+	// get all modules
+	modules, err := findAllModules(g.repo.Path, nil)
+	if err != nil {
+		return commit.Commit{}, nil, err
+	}
+
+	// map module name to module
+	moduleNameMap := map[string]module{}
 	for _, m := range modules {
-		if submodule.name == m.name {
-			mod = m
-			break
+		moduleNameMap[m.name] = m
+	}
+
+	// parse HEAD's commit message
+	cc := commit.Parse(head.Message)
+
+	// extract modules from Modules footers
+	var commitModules []module
+	for _, footer := range cc.Footers {
+		if footer.Title == "Modules" {
+			for _, moduleName := range strings.Split(footer.Text, ",") {
+				moduleName = strings.TrimSpace(moduleName)
+				m, ok := moduleNameMap[moduleName]
+				if !ok {
+					return commit.Commit{}, nil, fmt.Errorf("no module %s found", moduleName)
+				}
+				commitModules = append(commitModules, m)
+			}
 		}
 	}
 
-	// if we didn't match, exit
-	if mod.name == "" {
-		return "", ErrNoSubmodule
-	}
-
-	// get latest commit for this submodule
-	latest, hash, err := g.getLatest(mod)
-	if err != nil {
-		return "", err
-	}
-
-	// Find the most significant change between HEAD and latest
-	commits, err := g.repo.RevList("HEAD", hash)
-	if err != nil {
-		return "", fmt.Errorf("could not fetch commits HEAD..%s: %w", hash, err)
-	}
-
-	// group commits by modules and only keep the ones that match submodule
-	groups := groupCommitsByModule(commits, modules)
-	commits = groups[mod]
-
-	// If this is the latest tagged commit, then return
-	var version string
-	if len(commits) > 0 {
-		change, breaking := g.parseCommits(commits)
-		// set breaking false if this is a 0.x.y version and PreMajor is set
-		if g.Config.PreMajor && latest.Major() == 0 {
-			breaking = false
+	// default to the root module
+	if len(commitModules) == 0 {
+		// find the root module, defaulting to the first module found
+		rootModule := modules[0]
+		for _, m := range modules {
+			if m.path == rootModulePath {
+				rootModule = m
+				break
+			}
 		}
-		switch {
-		case breaking:
-			version = latest.IncMajor().String()
-		case change == commit.TypeFeature:
-			version = latest.IncMinor().String()
-		default:
-			version = latest.IncPatch().String()
-		}
-	} else {
-		version = latest.String()
+		commitModules = []module{rootModule}
 	}
 
-	return mod.prefix + g.Config.VersionPrefix + version, nil
+	if cc.Type == commit.TypeRelease {
+		stats, err := head.Stats()
+		if err != nil {
+			return commit.Commit{}, nil, err
+		}
+
+		// generate a list of modules changed by this commit
+		var changedModules []module
+		for _, stat := range stats {
+			if mod, ok := isModuleFile(stat.Name, modules); ok {
+				changedModules = append(changedModules, mod)
+			}
+		}
+
+		if err := validateCommitModules(commitModules, changedModules); err != nil {
+			return commit.Commit{}, nil, err
+		}
+	}
+
+	return cc, commitModules, nil
+}
+
+func (g *Gotagger) versions(modules []module) ([]string, error) {
+	if len(modules) == 0 {
+		// no modules, so fake a "root" module with no name or prefix
+		modules = []module{{path: "."}}
+	}
+
+	versions := make([]string, len(modules))
+	for i, mod := range modules {
+		// get latest commit for this submodule
+		latest, hash, err := g.getLatest(mod)
+		if err != nil {
+			return nil, err
+		}
+
+		// Find the most significant change between HEAD and latest
+		commits, err := g.repo.RevList("HEAD", hash)
+		if err != nil {
+			return nil, fmt.Errorf("could not fetch commits HEAD..%s: %w", hash, err)
+		}
+
+		// group commits by modules and only keep the ones that match submodule
+		groups := groupCommitsByModule(commits, modules)
+		commits = groups[mod]
+
+		// If this is the latest tagged commit, then return
+		var version string
+		if len(commits) > 0 {
+			change, breaking := g.parseCommits(commits)
+			// set breaking false if this is a 0.x.y version and PreMajor is set
+			if g.Config.PreMajor && latest.Major() == 0 {
+				breaking = false
+			}
+			switch {
+			case breaking:
+				version = latest.IncMajor().String()
+			case change == commit.TypeFeature:
+				version = latest.IncMinor().String()
+			default:
+				version = latest.IncPatch().String()
+			}
+		} else {
+			version = latest.String()
+		}
+
+		versions[i] = mod.prefix + g.Config.VersionPrefix + version
+	}
+
+	return versions, nil
 }
 
 var versionRegex = regexp.MustCompile(`/v\d+$`)
@@ -367,7 +381,14 @@ func (s sortByPath) Less(i, j int) bool {
 	return si.path < sj.path
 }
 
-func findAllModules(root string) (modules []module, err error) {
+func findAllModules(root string, include []string) (modules []module, err error) {
+	// either return all modules, or only explicitly included modules
+	modfilter := map[string]bool{}
+	for _, name := range include {
+		modfilter[name] = true
+	}
+
+	// walk root and find all modules
 	err = filepath.Walk(root, func(pth string, info os.FileInfo, err error) error {
 		// bail on errors
 		if err != nil {
@@ -393,6 +414,11 @@ func findAllModules(root string) (modules []module, err error) {
 
 			// ignore go.mods that don't parse a module path
 			if modName := modfile.ModulePath(data); modName != "" {
+				if _, ok := modfilter[modName]; !ok && len(modfilter) > 0 {
+					// ignore this module
+					return nil
+				}
+
 				modPath := filepath.Dir(relPath)
 
 				// convert rootModule to empty string, otherwise add a trailing slash
@@ -501,7 +527,7 @@ func validateCommitModules(commitModules, changedModules []module) (err error) {
 		err = errors.New("module validation failed:" + msg)
 	}
 
-	return err
+	return
 }
 
 // TagRepo determines what the curent version of the repository is by parsing the commit
@@ -567,7 +593,7 @@ func isRelease(c ggit.Commit) bool {
 	return m == marker.Release
 }
 
-func getLatest(r git.Repo, prefix string) (latest *semver.Version, hash string, err error) {
+func getLatest(r ggit.Repo, prefix string) (latest *semver.Version, hash string, err error) {
 	taggedCommits, err := r.Tags(prefix)
 	if err != nil {
 		return latest, hash, err

@@ -29,14 +29,14 @@ func TestGotagger_getLatest(t *testing.T) {
 			title:    "no latest",
 			prefix:   "v",
 			module:   module{".", "foo", ""},
-			repoFunc: simpleGitRepo,
+			repoFunc: simpleGoRepo,
 			want:     "v1.0.0",
 		},
 		{
 			title:    "sub module",
 			prefix:   "v",
 			module:   module{filepath.Join("sub", "module"), "foo/sub/module", "sub/module/"},
-			repoFunc: simpleGitRepo,
+			repoFunc: simpleGoRepo,
 			want:     "v0.1.0",
 		},
 		{
@@ -87,18 +87,14 @@ func TestGotagger_getLatest(t *testing.T) {
 	}
 }
 
-func TestGotagger_SubmoduleVersion(t *testing.T) {
+func TestGotagger_ModuleVersion(t *testing.T) {
 	g, repo, path, teardown := newGotagger(t)
 	defer teardown()
 
-	simpleGitRepo(t, repo, path)
+	simpleGoRepo(t, repo, path)
 
-	v, err := g.SubmoduleVersion("foo/sub/module")
-	if err != nil {
-		t.Fatalf("SubmoduleVersion() returned an error: %v", err)
-	}
-	if got, want := v, "sub/module/v0.1.1"; got != want {
-		t.Errorf("SubmoduleVersion() returned %s, want %s", got, want)
+	if v, err := g.ModuleVersions("foo/sub/module"); assert.NoError(t, err) {
+		assert.Equal(t, []string{"sub/module/v0.1.1"}, v)
 	}
 }
 
@@ -549,14 +545,21 @@ func TestGotagger_Version(t *testing.T) {
 	g, repo, path, teardown := newGotagger(t)
 	defer teardown()
 
-	simpleGitRepo(t, repo, path)
+	simpleGoRepo(t, repo, path)
 
-	v, err := g.Version()
-	if err != nil {
-		t.Fatalf("Version() returned an error: %v", err)
+	if v, err := g.Version(); assert.NoError(t, err) {
+		assert.Equal(t, "v1.1.0", v)
 	}
-	if got, want := v, "v1.1.0"; got != want {
-		t.Errorf("Version() returned %s, want %s", got, want)
+}
+
+func TestGotagger_Version_no_module(t *testing.T) {
+	g, repo, path, teardown := newGotagger(t)
+	defer teardown()
+
+	testutils.SimpleGitRepo(t, repo, path)
+
+	if v, err := g.Version(); assert.NoError(t, err) {
+		assert.Equal(t, "v1.1.0", v)
 	}
 }
 
@@ -564,7 +567,7 @@ func TestGotagger_Version_tag_head(t *testing.T) {
 	g, repo, path, teardown := newGotagger(t)
 	defer teardown()
 
-	simpleGitRepo(t, repo, path)
+	simpleGoRepo(t, repo, path)
 
 	// tag HEAD higher than what gotagger would return
 	version := "v1.10.0"
@@ -582,22 +585,22 @@ func TestGotagger_Version_PreMajor(t *testing.T) {
 	// set PreMajor
 	g.Config.PreMajor = true
 
-	simpleGitRepo(t, repo, path)
+	simpleGoRepo(t, repo, path)
 
 	// make a breaking change to foo
 	testutils.CommitFile(t, repo, path, "foo.go", "feat!: breaking change", []byte(`contents`))
 
 	// major version should rev
-	if v, err := g.SubmoduleVersion("foo"); assert.NoError(t, err) {
-		assert.Equal(t, "v2.0.0", v)
+	if v, err := g.ModuleVersions("foo"); assert.NoError(t, err) {
+		assert.Equal(t, []string{"v2.0.0"}, v)
 	}
 
 	// make a breaking change to sub/module
 	testutils.CommitFile(t, repo, path, filepath.Join("sub", "module", "file"), "feat!: breaking change", []byte(`contents`))
 
 	// version should not rev major
-	if v, err := g.SubmoduleVersion("foo/sub/module"); assert.NoError(t, err) {
-		assert.Equal(t, "sub/module/v0.2.0", v)
+	if v, err := g.ModuleVersions("foo/sub/module"); assert.NoError(t, err) {
+		assert.Equal(t, []string{"sub/module/v0.2.0"}, v)
 	}
 }
 
@@ -605,7 +608,7 @@ func TestGotagger_Version_breaking(t *testing.T) {
 	g, repo, path, teardown := newGotagger(t)
 	defer teardown()
 
-	simpleGitRepo(t, repo, path)
+	simpleGoRepo(t, repo, path)
 
 	// make a breaking change
 	testutils.CommitFile(t, repo, path, "new", "feat!: new is breaking", []byte("new data"))
@@ -620,40 +623,84 @@ func TestGotagger_Version_breaking(t *testing.T) {
 	}
 }
 
+func TestNew(t *testing.T) {
+	_, path, teardown := testutils.NewGitRepo(t)
+	defer teardown()
+
+	// invalid path should return an error
+	_, err := New(filepath.FromSlash("/does/not/exist"))
+	assert.Error(t, err)
+
+	if g, err := New(path); assert.NoError(t, err) && assert.NotNil(t, g) {
+		assert.Equal(t, NewDefaultConfig(), g.Config)
+	}
+}
+
 func Test_findAllModules(t *testing.T) {
 	tests := []struct {
 		title    string
 		repoFunc func(testutils.T, *sgit.Repository, string)
+		include  []string
 		want     []module
 	}{
 		{
-			"simple git repo",
-			simpleGitRepo,
-			[]module{
+			title:    "simple git repo",
+			repoFunc: simpleGoRepo,
+			want: []module{
 				{".", "foo", ""},
 				{filepath.Join("sub", "module"), "foo/sub/module", "sub/module/"},
 			},
 		},
 		{
-			"v1 on master branch",
-			masterV1GitRepo,
-			[]module{
+			title:    "v1 on master branch",
+			repoFunc: masterV1GitRepo,
+			want: []module{
 				{".", "foo", ""},
 				{"bar", "foo/bar", "bar/"},
 			},
 		},
 		{
-			"v2 on master branch",
-			masterV2GitRepo,
-			[]module{
+			title:    "v1 on master branch, include foo",
+			repoFunc: masterV1GitRepo,
+			include:  []string{"foo"},
+			want: []module{
+				{".", "foo", ""},
+			},
+		},
+		{
+			title:    "v1 on master branch, include foo/bar",
+			repoFunc: masterV1GitRepo,
+			include:  []string{"foo/bar"},
+			want: []module{
+				{"bar", "foo/bar", "bar/"},
+			},
+		},
+		{
+			title:    "v1 on master branch, explicitly include all",
+			repoFunc: masterV1GitRepo,
+			include:  []string{"foo", "foo/bar"},
+			want: []module{
+				{".", "foo", ""},
+				{"bar", "foo/bar", "bar/"},
+			},
+		},
+		{
+			title:    "v1 on master branch, exclude all",
+			repoFunc: masterV1GitRepo,
+			include:  []string{"foz"},
+		},
+		{
+			title:    "v2 on master branch",
+			repoFunc: masterV2GitRepo,
+			want: []module{
 				{".", "foo/v2", ""},
 				{"bar", "foo/bar/v2", "bar/"},
 			},
 		},
 		{
-			"v2 directory",
-			v2DirGitRepo,
-			[]module{
+			title:    "v2 directory",
+			repoFunc: v2DirGitRepo,
+			want: []module{
 				{".", "foo", ""},
 				{"v2", "foo/v2", ""},
 				{"bar", "foo/bar", "bar/"},
@@ -671,7 +718,7 @@ func Test_findAllModules(t *testing.T) {
 
 			tt.repoFunc(t, repo, path)
 
-			if modules, err := findAllModules(path); assert.NoError(t, err) {
+			if modules, err := findAllModules(path, tt.include); assert.NoError(t, err) {
 				assert.Equal(t, tt.want, modules)
 			}
 		})
@@ -686,7 +733,7 @@ func Test_groupCommitsByModule(t *testing.T) {
 	}{
 		{
 			title:    "simple git repo",
-			repoFunc: simpleGitRepo,
+			repoFunc: simpleGoRepo,
 			want: map[module][]string{
 				{".", "foo", ""}: {
 					"feat: add go.mod",
@@ -756,7 +803,7 @@ func Test_groupCommitsByModule(t *testing.T) {
 
 			tt.repoFunc(t, repo, path)
 
-			modules, err := findAllModules(path)
+			modules, err := findAllModules(path, nil)
 			require.NoError(t, err)
 
 			commits, err := g.repo.RevList("HEAD", "")
@@ -780,7 +827,7 @@ func Test_groupCommitsByModule(t *testing.T) {
 	}
 }
 
-func Test_validateModules(t *testing.T) {
+func TestGotagger_validateModules(t *testing.T) {
 	tests := []struct {
 		title   string
 		commit  []module
@@ -971,7 +1018,7 @@ func setupV2Modules(t testutils.T, repo *sgit.Repository, path string) (head plu
 	return
 }
 
-func simpleGitRepo(t testutils.T, repo *sgit.Repository, path string) {
+func simpleGoRepo(t testutils.T, repo *sgit.Repository, path string) {
 	t.Helper()
 
 	testutils.SimpleGitRepo(t, repo, path)
