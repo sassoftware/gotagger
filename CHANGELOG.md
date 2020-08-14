@@ -68,6 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fix
 
+- Correctly set `CreateTag` option to `true` when `-push` flag is used.
 - `gotagger` correctly ignores directories named `testdata`
   and directories that begin with `.` and `_`
   when looking for go modules.
