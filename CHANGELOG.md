@@ -4,8 +4,9 @@
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
 - [Changelog](#changelog)
-    - [[Unreleased]](#unreleased)
+    - [[v0.5.0] - 2020/08/14](#v050-20200814)
         - [Feature](#feature)
+        - [Fix](#fix)
         - [Refactor](#refactor)
     - [[v0.4.0] - 2019/07/10](#v040-20190710)
         - [Added](#added)
@@ -35,27 +36,63 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [v0.5.0] - 2020/08/14
 
 ### Feature
 
-- Added support for tagging submodules via releaes commits.
-  A release commit may contain a `Modules` footer that is a comma-separated list of submodules for gotagger to tag.
-  The main module may be included by including `.` in the list of modules.
+- Add an `ExcludeModules` option to `Config`.
+
+  This is a list of module names
+  or whole paths
+  to ignore.
+- Add a `PreMajor` option to `Config`.
+
+  When `PreMajor` is true, `gotagger` will not rev the major version to 1,
+  even if commits are flagged as breaking changes. This has no effect if the
+  major version is 1 or higher.
+- `TagRepo` and `ModuleVersions` validate
+  that a release commit references only modules that are changed by the commit
+  and that the commit references all of the changed modules.
+- Add a `ModuleVersions` function that takes a variadic list of module names,
+  and returns the versions of those modules,
+  or all modules if called with no arguments.
+- Add a `Version` function
+  that returns the version of the project.
+
+  In a multi-module repository,
+  `Version` returns the version of the first module found.
+- Add support for tagging any go module via release commits.
+
+  A release commit may contain a `Modules` footer
+  that is a comma-separated list of module names for gotagger to tag.
+
+### Fix
+
+- `gotagger` correctly ignores directories named `testdata`
+  and directories that begin with `.` and `_`
+  when looking for go modules.
 
 ### Refactor
 
 - Rewrite git and conventional commit parsing.
-  This is preparing for submodule support.
-  The existing commit parsing and git repository interactions won't scale to solve the problem of tagging sumodules.
+
+  This is preparing for full go module support.
+  The existing commit parsing
+  and git repository interactions
+  won't scale to solve the problem of tagging sumodules.
   These packages will remain until the v1.0.0 release of `gotagger`.
 
 ## [v0.4.0] - 2019/07/10
 
 ### Added
 
-- The `gotagger` cli now takes `-remote` and `-prefix` options to set the name
-  of the remote to push to and the version prefix, respectively.
+- The `gotagger` cli now takes
+`-remote`
+and `-prefix`
+options to set the name
+of the remote to push to
+and the version prefix,
+respectively.
 
 ### Fixed
 
@@ -114,7 +151,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - marker package for parsing commmit markers
 - basic cli capability: printing the new version and tagging a repo
 
-[Unreleased]: https://github.com/sassoftware/gotagger/compare/v0.4.0...master
+[Unreleased]: https://github.com/sassoftware/gotagger/compare/v0.5.0...master
+[v0.5.0]: https://github.com/sassoftware/gotagger/compare/v0.4.0...v0.5.0
 [v0.4.0]: https://github.com/sassoftware/gotagger/compare/v0.3.1...v0.4.0
 [v0.3.1]: https://github.com/sassoftware/gotagger/compare/v0.3.0...v0.3.1
 [v0.3.0]: https://github.com/sassoftware/gotagger/compare/v0.2.0...v0.3.0
