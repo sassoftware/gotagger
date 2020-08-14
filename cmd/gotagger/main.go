@@ -98,7 +98,7 @@ func (g *GoTagger) Run() int {
 		g.err.Println("error: ", err)
 		return genericErrorExitCode
 	}
-	r.Config.CreateTag = g.tagRelease
+	r.Config.CreateTag = g.tagRelease || g.pushTag
 	r.Config.PushTag = g.pushTag
 	r.Config.RemoteName = g.remoteName
 	r.Config.VersionPrefix = g.versionPrefix
