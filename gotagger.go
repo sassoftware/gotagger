@@ -231,7 +231,7 @@ func (g *Gotagger) findAllModules(include []string) (modules []module, err error
 		if info.IsDir() {
 			// don't recurse into directories that start with '.', '_', or are named 'testdata'
 			dirname := info.Name()
-			if strings.HasPrefix(dirname, ".") || strings.HasPrefix(dirname, "_") || dirname == "testdata" {
+			if dirname != "." && (strings.HasPrefix(dirname, ".") || strings.HasPrefix(dirname, "_") || dirname == "testdata") {
 				return filepath.SkipDir
 			}
 
