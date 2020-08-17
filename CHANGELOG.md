@@ -4,7 +4,7 @@
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
 - [Changelog](#changelog)
-    - [[v0.5.0] - 2020/08/14](#v050-20200814)
+    - [[v0.5.0] - 2020/08/17](#v050-20200817)
         - [Feature](#feature)
         - [Fix](#fix)
         - [Refactor](#refactor)
@@ -36,7 +36,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v0.5.0] - 2020/08/14
+## [v0.5.0] - 2020/08/17
 
 ### Feature
 
@@ -68,6 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fix
 
+- `Gotagger` no longer ignores all non-root go modules when given a relative path.
 - Correctly set `CreateTag` option to `true` when `-push` flag is used.
 - `gotagger` correctly ignores directories named `testdata`
   and directories that begin with `.` and `_`
