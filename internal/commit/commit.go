@@ -33,11 +33,32 @@ type Commit struct {
 	Revert   Revert
 }
 
+func (c Commit) Message() string {
+	message := c.Header
+	if c.Body != "" {
+		message += "\n\n" + c.Body
+	}
+	var footer string
+	for _, f := range c.Footers {
+		footer += "\n" + f.String()
+	}
+
+	if footer != "" {
+		message += "\n" + footer
+	}
+
+	return message
+}
+
 // Footer represents a conventional commit footer, which roughly corresponds to a
 // git trailer: Foo-bar: some text.
 type Footer struct {
 	Title string
 	Text  string
+}
+
+func (f Footer) String() string {
+	return f.Title + ": " + f.Text
 }
 
 // Revert represents what this commmit reverts.

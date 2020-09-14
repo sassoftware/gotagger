@@ -12,6 +12,8 @@ import (
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"sassoftware.io/clis/gotagger/internal/testutils"
 )
 
@@ -95,7 +97,7 @@ func TestHead(t *testing.T) {
 		t.Errorf("Head() returned an error: %v", err)
 	}
 
-	if got, want := c.Message, "feat: bar\n\nThis is a great bar."; got != want {
+	if got, want := c.Message(), "feat: bar\n\nThis is a great bar."; got != want {
 		t.Errorf("Head() returned %q, want %q", got, want)
 	}
 }
@@ -208,7 +210,7 @@ func TestRevList(t *testing.T) {
 		{
 			start: "other",
 			paths: []string{"baz"},
-			want:  0,
+			want:  1,
 		},
 		{
 			start: "other",
@@ -227,17 +229,52 @@ func TestRevList(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Parallel()
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d:%v", i, tt), func(t *testing.T) {
-			commits, err := r.RevList(tt.start, tt.end, tt.paths...)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if tt.want != len(commits) {
-				t.Errorf("want %d commits, got %d", tt.want, len(commits))
+			if commits, err := r.RevList(tt.start, tt.end, tt.paths...); assert.NoError(t, err) {
+				assert.Equal(t, tt.want, len(commits))
 			}
 		})
+	}
+}
+
+func TestRevList_one_commit(t *testing.T) {
+	assert := assert.New(t)
+	require := require.New(t)
+
+	repo, path, teardown := testutils.NewGitRepo(t)
+	defer teardown()
+
+	testutils.CommitFile(t, repo, path, "foo", "add foo", []byte("contents"))
+
+	r, err := New(path)
+	require.NoError(err)
+
+	if commits, err := r.RevList("HEAD", ""); assert.NoError(err) {
+		assert.Equal(1, len(commits))
+	}
+
+	if _, err := r.RevList("HEAD", "HEAD~1"); assert.Error(err) {
+		assert.Contains(err.Error(), "bad revision '^HEAD~1")
+	}
+}
+
+func TestRevList_empty_repo(t *testing.T) {
+	assert := assert.New(t)
+	require := require.New(t)
+
+	_, path, teardown := testutils.NewGitRepo(t)
+	defer teardown()
+
+	r, err := New(path)
+	require.NoError(err)
+
+	if _, err := r.RevList("HEAD", ""); assert.Error(err) {
+		assert.Contains(err.Error(), "unknown revision")
+	}
+
+	if _, err := r.RevList("HEAD", "HEAD^"); assert.Error(err) {
+		assert.Contains(err.Error(), "unknown revision")
 	}
 }
 
@@ -279,7 +316,7 @@ func TestTags(t *testing.T) {
 
 	if got, want := len(tags), 1; got != want {
 		t.Errorf("Tags returned %d tags, want %d", got, want)
-	} else if got, want := tags[0].Name().Short(), "v1.0.0"; got != want {
+	} else if got, want := tags[0], "v1.0.0"; got != want {
 		t.Errorf("Tags returned %s, want %s", got, want)
 	}
 }
@@ -310,7 +347,7 @@ func TestTags_prefixes(t *testing.T) {
 
 	if got, want := len(tags), 1; got != want {
 		t.Errorf("Tags returned %d tags, want %d", got, want)
-	} else if got, want := tags[0].Name().Short(), submodule+"/v0.1.0"; got != want {
+	} else if got, want := tags[0], submodule+"/v0.1.0"; got != want {
 		t.Errorf("Tags returned %s, want %s", got, want)
 	}
 }
@@ -365,7 +402,7 @@ func Test_hasPrefix(t *testing.T) {
 		tt := tt
 		t.Run(tt.title, func(t *testing.T) {
 			if got, want := hasPrefix(tt.version, tt.prefixes), tt.want; got != want {
-				t.Errorf("hasPrefx returned %v, want %v", got, want)
+				t.Errorf("hasPrefix returned %v, want %v", got, want)
 			}
 		})
 	}

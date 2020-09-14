@@ -5,50 +5,85 @@ package git
 
 import (
 	"errors"
+	"fmt"
+	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"sassoftware.io/clis/gotagger/internal/commit"
 )
 
 var (
-	errEOC        = errors.New("end of commits")
 	errEmptyStart = errors.New("Must specify a start")
 )
 
 // Commit represents a commit in a git repository.
 type Commit struct {
-	Hash     string            // The commit hash
-	Subject  string            // The commit subject, generally the first line of the commit message
-	Body     string            // The commit body
-	Tags     []*semver.Version // All tags that point to this commit.
-	Trailers []string          // The commit trailers
+	commit.Commit
+	Hash    string
+	Changes []Change
+}
+
+type Change struct {
+	SourceName string
+	DestName   string
+	Action     string
+	SourceMode string
+	DestMode   string
+	SourceSHA  string
+	DestSHA    string
 }
 
 // Repository represents a git repository.
 type Repository struct {
-	Path string
-	Repo *git.Repository
+	GitDir string
+	Path   string
+	Repo   *git.Repository
+
+	runner func([]string, string) (string, error)
 }
 
 // New returns a new git Repo. If path is not a git repo, then an error will be returned.
 func New(path string) (*Repository, error) {
+	gitDir, err := getGitDirectory(path)
+	if err != nil {
+		return nil, err
+	}
+
+	// if we got a relative path, then join it with path
+	if !filepath.IsAbs(gitDir) {
+		gitDir = filepath.Join(path, gitDir)
+		gitDir, err = filepath.Abs(gitDir)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	r, err := git.PlainOpen(path)
 	if err != nil {
 		return nil, err
 	}
-	return &Repository{Path: path, Repo: r}, nil
+
+	repo := &Repository{
+		GitDir: gitDir,
+		Path:   path,
+		Repo:   r,
+		runner: runGitCommand,
+	}
+
+	return repo, nil
 }
 
 // CreateTag tags a commit in a git repo.
 //
 // If prefix is a non-empty string, then the version will be prefixed with that string.
-func (r *Repository) CreateTag(hash plumbing.Hash, name, message string) (*object.Tag, error) {
+func (r *Repository) CreateTag(hash string, name, message string) (*object.Tag, error) {
 	if message == "" {
 		message = "Release " + name
 	}
@@ -56,7 +91,7 @@ func (r *Repository) CreateTag(hash plumbing.Hash, name, message string) (*objec
 	if err != nil {
 		return nil, err
 	}
-	ref, err := r.Repo.CreateTag(name, hash, &git.CreateTagOptions{
+	ref, err := r.Repo.CreateTag(name, plumbing.NewHash(hash), &git.CreateTagOptions{
 		Message: message,
 		Tagger: &object.Signature{
 			Email: cfg.Raw.Section("user").Option("email"),
@@ -87,12 +122,13 @@ func (r *Repository) DeleteTags(tags []*object.Tag) error {
 }
 
 // Head returns the commit at HEAD
-func (r *Repository) Head() (*object.Commit, error) {
-	ref, err := r.Repo.Head()
+func (r *Repository) Head() (Commit, error) {
+	commits, err := r.RevList("HEAD", "HEAD^")
 	if err != nil {
-		return nil, err
+		return Commit{}, err
 	}
-	return r.Repo.CommitObject(ref.Hash())
+
+	return commits[0], nil
 }
 
 // PushTag pushes tag to remote.
@@ -114,39 +150,43 @@ func (r *Repository) PushTags(tags []*object.Tag, remote string) error {
 }
 
 // RevList returns a slice of commits from start to end.
-func (r *Repository) RevList(s, e string, paths ...string) ([]*object.Commit, error) {
-	if s == "" {
+func (r *Repository) RevList(start, end string, paths ...string) ([]Commit, error) {
+	if start == "" {
 		return nil, errEmptyStart
 	}
-	start, err := r.parseRevOrHash(s)
+
+	args := []string{"log", "--format=raw", "--raw", "--no-abbrev", start}
+
+	// add start and end refs
+	if end != "" {
+		args = append(args, "^"+end)
+	}
+
+	if len(paths) > 0 {
+		args = append(args, "--")
+		args = append(args, paths...)
+	}
+
+	out, err := r.run(args)
 	if err != nil {
 		return nil, err
 	}
-	end, err := r.parseRevOrHash(e)
+
+	out = strings.TrimSpace(out)
+	if len(out) == 0 {
+		return []Commit{}, nil
+	}
+
+	return parseCommits(string(out)), nil
+}
+
+func (r *Repository) RevParse(rev string) (string, error) {
+	out, err := r.run([]string{"rev-parse", rev})
 	if err != nil {
-		return nil, err
-	}
-	cIter, err := r.Repo.Log(&git.LogOptions{
-		From:       start,
-		PathFilter: matchPaths(paths),
-	})
-	if err != nil {
-		return nil, err
-	}
-	commits := []*object.Commit{}
-	if err := cIter.ForEach(func(c *object.Commit) error {
-		if c.Hash == end {
-			return errEOC
-		}
-
-		commits = append(commits, c)
-
-		return nil
-	}); err != nil && err != errEOC {
-		return nil, err
+		return "", err
 	}
 
-	return commits, nil
+	return strings.TrimSpace(out), nil
 }
 
 // Tags returns all tags that point to ancestors of rev.
@@ -154,78 +194,38 @@ func (r *Repository) RevList(s, e string, paths ...string) ([]*object.Commit, er
 // rev can be either a revision or a hash.
 //
 // prefix is a string prefix to filter tags with.
-func (r *Repository) Tags(rev string, prefixes ...string) (tags []*plumbing.Reference, err error) {
-	h, err := r.parseRevOrHash(rev)
+func (r *Repository) Tags(rev string, prefixes ...string) (tags []string, err error) {
+	// list all tags that point to ancestors of rev
+	args := []string{"tag", "--merged", rev}
+	if len(prefixes) > 0 {
+		args = append(args, "--list")
+		for _, p := range prefixes {
+			args = append(args, p+"*")
+		}
+	}
+
+	out, err := r.run(args)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	c, err := r.Repo.CommitObject(h)
-	if err != nil {
-		return nil, err
-	}
+	out = strings.TrimSpace(out)
+	tags = strings.Split(string(out), "\n")
 
-	tIter, err := r.Repo.Tags()
-	if err != nil {
-		return nil, err
-	}
-
-	if err := tIter.ForEach(func(ref *plumbing.Reference) error {
-		// resolve tag to commit
-		var tc *object.Commit
-		t, err := r.Repo.TagObject(ref.Hash())
-		switch err {
-		case nil:
-			// annotated tag
-			tc, err = t.Commit()
-			if err != nil {
-				return err
-			}
-		case plumbing.ErrObjectNotFound:
-			// light weight tag
-			tc, err = r.Repo.CommitObject(ref.Hash())
-			if err != nil {
-				return err
-			}
-		default:
-			// some other error
-			return err
-		}
-
-		// check if this tag matches one of our prefixes
-		// "" prefix means no prefix
-		if len(prefixes) > 0 {
-			// strip refs/tags/ from name
-			tagName := ref.Name().Short()
-			if !hasPrefix(tagName, prefixes) {
-				return nil
-			}
-		}
-
-		// if the tagged commit is an ancestor of rev, then add it to tags
-		ok, err := tc.IsAncestor(c)
-		if err != nil {
-			return err
-		}
-		if ok {
-			tags = append(tags, ref)
-		}
-
-		return nil
-	}); err != nil {
-		return nil, err
-	}
-
-	return tags, nil
+	return
 }
 
-func (r *Repository) parseRevOrHash(s string) (plumbing.Hash, error) {
-	if s != "" {
-		if i, err := r.Repo.ResolveRevision(plumbing.Revision(s)); err == nil {
-			return *i, err
-		}
+func (r *Repository) run(args []string) (string, error) {
+	args = append([]string{"--git-dir", r.GitDir}, args...)
+	return r.runner(args, r.Path)
+}
+
+func getGitDirectory(path string) (string, error) {
+	out, err := runGitCommand([]string{"rev-parse", "--git-dir"}, path)
+	if err != nil {
+		return "", err
 	}
-	return plumbing.NewHash(s), nil
+	return strings.TrimSpace(string(out)), nil
 }
 
 // hasPrefix returns true if t has a prefix that matches any prefixes.
@@ -245,24 +245,98 @@ func hasPrefix(t string, prefixes []string) bool {
 	return false
 }
 
-func matchPaths(paths []string) func(string) bool {
-	// return true if there are no paths to match against
-	if len(paths) == 0 {
-		return func(_ string) bool { return true }
+func parseChanges(lines []string) []Change {
+	changes := make([]Change, len(lines))
+	for i, line := range lines {
+		parts := strings.Split(line, "\t")
+		line, files := parts[0], parts[1:]
+
+		parts = strings.Split(line, " ")
+		c := Change{
+			SourceMode: strings.TrimPrefix(parts[0], ":"),
+			DestMode:   parts[1],
+			SourceSHA:  parts[2],
+			DestSHA:    parts[3],
+			Action:     parts[4],
+			SourceName: files[0],
+		}
+
+		if len(files) > 1 {
+			c.DestName = files[1]
+		}
+
+		changes[i] = c
 	}
 
-	return func(s string) (ok bool) {
-		var matcher func(a, b string) bool
-		for _, p := range paths {
-			if strings.HasSuffix(p, "/") {
-				// path is a directory, so do prefix matching
-				matcher = func(a, b string) bool { return strings.HasPrefix(b, a) }
-			} else {
-				// path is a file so do strict matching
-				matcher = func(a, b string) bool { return a == b }
+	return changes
+}
+
+func parseCommits(data string) (commits []Commit) {
+	// strip the first 'commit '
+	data = strings.TrimPrefix(data, "commit ")
+
+	// split on \n^commits to separate the raw output into raw commits
+	rawCommits := strings.Split(data, "\ncommit ")
+	for _, rawCommit := range rawCommits {
+		// separate headers from message and changes
+		parts := strings.Split(rawCommit, "\n\n")
+		headers, message := parts[0], parts[1]
+
+		var changes []Change
+		if len(parts) > 2 {
+			rawChanges := strings.TrimSpace(parts[2])
+			if rawChanges != "" {
+				changes = parseChanges(strings.Split(rawChanges, "\n"))
 			}
-			ok = ok || matcher(p, s)
 		}
-		return
+
+		// trim the leading four spaces from the commit message lines
+		message = strings.TrimSpace(message)
+		message = strings.ReplaceAll(message, "\n    ", "\n")
+
+		// parse the commit message
+		commit := Commit{
+			Commit:  commit.Parse(message),
+			Hash:    strings.Split(headers, "\n")[0],
+			Changes: changes,
+		}
+
+		commits = append(commits, commit)
 	}
+
+	return
+}
+
+func runGitCommand(args []string, path string) (string, error) {
+	c := exec.Command("git", args...)
+
+	if path != "" {
+		c.Dir = path
+	}
+
+	out, err := c.Output()
+	if err != nil {
+		switch err := err.(type) {
+		case *exec.ExitError:
+			code := err.ExitCode()
+			switch code {
+			case 127:
+				return "", fmt.Errorf("git command not found. Make sure git is installed and on your path")
+			default:
+				command := "git"
+				for _, arg := range args {
+					if strings.Contains(arg, " ") {
+						arg = "'" + arg + "'"
+					}
+					command += " " + arg
+				}
+
+				return "", fmt.Errorf("%s failed with exit code %d: %s", command, code, err.Stderr)
+			}
+		}
+
+		return "", err
+	}
+
+	return string(out), err
 }

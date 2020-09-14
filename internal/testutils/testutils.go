@@ -6,11 +6,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
-	"github.com/ianbruene/go-difflib/difflib"
 )
 
 const (
@@ -93,28 +91,6 @@ func CreateTag(t T, r *git.Repository, path, name string) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-}
-
-// DiffText returns the spew.Dump representation of got and want, and a diff of them.
-func DiffErrorf(t T, format string, got, want interface{}, args ...interface{}) {
-	t.Helper()
-
-	gotStr := spew.Sdump(got)
-	wantStr := spew.Sdump(want)
-
-	diff, err := difflib.GetUnifiedDiffString(difflib.UnifiedDiff{
-		A:        difflib.SplitLines(wantStr),
-		B:        difflib.SplitLines(gotStr),
-		Context:  3,
-		FromFile: "want",
-		ToFile:   "got",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	args = append(args, gotStr, wantStr, diff)
-	t.Errorf(format, args...)
 }
 
 func NewGitRepo(t T) (repo *git.Repository, path string, teardown func()) {

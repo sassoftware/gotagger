@@ -1,14 +1,45 @@
 package commit
 
 import (
-	"reflect"
 	"strings"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
+	"github.com/stretchr/testify/assert"
 	"pgregory.net/rapid"
-	"sassoftware.io/clis/gotagger/internal/testutils"
 )
+
+func TestCommit_Message(t *testing.T) {
+	tests := []struct {
+		commit Commit
+		want   string
+	}{
+		{
+			commit: Commit{Header: "header"},
+			want:   "header",
+		},
+		{
+			commit: Commit{Header: "header", Body: "body"},
+			want:   "header\n\nbody",
+		},
+		{
+			commit: Commit{Header: "header", Footers: []Footer{{"title", "text"}}},
+			want:   "header\n\ntitle: text",
+		},
+		{
+			commit: Commit{Header: "header", Body: "body", Footers: []Footer{{"title", "text"}}},
+			want:   "header\n\nbody\n\ntitle: text",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.want, func(t *testing.T) {
+			t.Parallel()
+
+			message := tt.commit.Message()
+			assert.Equal(t, tt.want, message)
+		})
+	}
+}
 
 func TestParse(t *testing.T) {
 	rapid.Check(t, func(t *rapid.T) {
@@ -45,18 +76,16 @@ func TestParse(t *testing.T) {
 				Header:   header,
 			}
 		}
-		if got, want := Parse(input), c; !reflect.DeepEqual(got, want) {
-			t.Errorf("Parse(%s) returned\n%s\nwant\n%s", input, spew.Sdump(got), spew.Sdump(want))
-		}
+		got := Parse(input)
+		assert.Equal(t, c, got)
 	})
 }
 
 func TestParse_empty(t *testing.T) {
 	rapid.Check(t, func(t *rapid.T) {
 		input := rapid.StringMatching(`^\s*`).Draw(t, "input").(string)
-		if got, want := Parse(input), (Commit{}); !reflect.DeepEqual(got, want) {
-			t.Errorf("Parse(%q) returned %+v, want %+v", input, got, want)
-		}
+		got := Parse(input)
+		assert.Equal(t, Commit{}, got)
 	})
 }
 
@@ -79,8 +108,7 @@ func TestParse_merge(t *testing.T) {
 		}
 		header += ": " + subject
 
-		input := "Merge \"" + header + "\"" + "\n\n" + body
-		if got, want := Parse(input), (Commit{
+		want := Commit{
 			Type:     Type(ctype),
 			Scope:    scope,
 			Subject:  strings.TrimSpace(subject),
@@ -88,9 +116,11 @@ func TestParse_merge(t *testing.T) {
 			Breaking: isBreaking,
 			Header:   header,
 			Merge:    true,
-		}); !reflect.DeepEqual(got, want) {
-			t.Errorf("Parse(%s) returned\n%#v\nwant %#v", input, got, want)
 		}
+
+		input := "Merge \"" + header + "\"" + "\n\n" + body
+		got := Parse(input)
+		assert.Equal(t, want, got)
 	})
 }
 
@@ -127,18 +157,17 @@ func TestParse_revert(t *testing.T) {
 				},
 			}
 		}
-		if got, want := Parse(input), c; !reflect.DeepEqual(got, want) {
-			testutils.DiffErrorf(t, "Parse(%s) returned\n%s\nwant%s\ndiff%s", got, want, input)
-		}
+		got := Parse(input)
+		assert.Equal(t, c, got)
 	})
 }
 
 func TestParse_arbitrary(t *testing.T) {
+	want := Commit{}
 	rapid.Check(t, func(t *rapid.T) {
 		input := rapid.String().Draw(t, "input").(string)
-		if got, want := Parse(input), (Commit{}); !reflect.DeepEqual(got, want) {
-			testutils.DiffErrorf(t, "Parse(%s) returned:\n%s\nwant:\n%s\ndiff:%s\n", got, want, input)
-		}
+		got := Parse(input)
+		assert.Equal(t, want, got)
 	})
 }
 
@@ -175,32 +204,22 @@ func TestParse_footer(t *testing.T) {
 		} else if (bFooterTitle != "" && footerTitle == "") || (bFooterTitle == "" && footerTitle != "") {
 			want = 1
 		}
-		if got, want := len(c.Footers), want; got != want {
-			t.Fatalf("Parse(%q) returned an unexected footer: %+v", input, c.Footers)
-		}
+		assert.Equal(t, want, len(c.Footers))
 
 		// check that we parsed a breaking change
-		if got, want := c, isBreaking; got.Breaking != want {
-			t.Errorf("Parse(%q) returned Breaking %v", input, got.Breaking)
-		}
+		assert.Equal(t, isBreaking, c.Breaking)
 
 		// validate that footer structs are correct
-		errorF := func(got, want interface{}) {
-			t.Errorf("Parse(%q) returned %+v, want %+v", input, got, want)
-		}
 		if isBreaking {
-			if got, want := c.Footers[0], (Footer{bFooterTitle, bFooterText}); !reflect.DeepEqual(got, want) {
-				errorF(got, want)
-			}
+			assert.Equal(t, Footer{bFooterTitle, bFooterText}, c.Footers[0])
 		}
+
 		if footerTitle != "" {
 			var i int
 			if isBreaking {
 				i = 1
 			}
-			if got, want := c.Footers[i], (Footer{footerTitle, footerText}); !reflect.DeepEqual(got, want) {
-				errorF(got, want)
-			}
+			assert.Equal(t, Footer{footerTitle, footerText}, c.Footers[i])
 		}
 	})
 }
@@ -215,16 +234,8 @@ func Test_parseMessageBody(t *testing.T) {
 		input := inputBody + "\n\n" + footerTitle + ": " + footerText
 
 		body, footers, breaking := parseMessageBody(strings.Split(input, "\n"))
-		if got, want := body, inputBody; got != want {
-			t.Errorf("parseMessageBody returned body %q, want %q", got, want)
-		}
-
-		if got, want := footers, []Footer{{Title: footerTitle, Text: footerText}}; !reflect.DeepEqual(got, want) {
-			testutils.DiffErrorf(t, "parseMessageBody returned:\n%s\nwant:\n%s\ndiff:\n%s", got, want)
-		}
-
-		if !breaking {
-			t.Errorf("parseMessageBody returned breaking %v", breaking)
-		}
+		assert.Equal(t, inputBody, body)
+		assert.Equal(t, []Footer{{Title: footerTitle, Text: footerText}}, footers)
+		assert.True(t, breaking)
 	})
 }
