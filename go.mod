@@ -15,5 +15,5 @@ require (
 	golang.org/x/net v0.0.0-20200505041828-1ed23360d12c // indirect
 	golang.org/x/sys v0.0.0-20200420163511-1957bb5e6d1f // indirect
 	gopkg.in/yaml.v2 v2.2.8 // indirect
-	pgregory.net/rapid v0.4.0
+	pgregory.net/rapid v0.4.1
 )

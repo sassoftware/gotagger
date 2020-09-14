@@ -103,3 +103,5 @@ gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c h1:dUUwHk2QECo/6vqA44rthZ8ie
 gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 pgregory.net/rapid v0.4.0 h1:/boyXNQlDs1pmk7g1b9u2KrYqXnqjj0ARUDsZj5kapg=
 pgregory.net/rapid v0.4.0/go.mod h1:UYpPVyjFHzYBGHIxLFoupi8vwk6rXNzRY9OMvVxFIOU=
+pgregory.net/rapid v0.4.1 h1:oC9zGwnIaJvtkyj7yAFD1SX+BkQx0ghSmn85zzK/1sQ=
+pgregory.net/rapid v0.4.1/go.mod h1:UYpPVyjFHzYBGHIxLFoupi8vwk6rXNzRY9OMvVxFIOU=
