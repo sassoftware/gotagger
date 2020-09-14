@@ -62,7 +62,7 @@ type GoTagger struct {
 
 // Runs GoTagger.
 func (g *GoTagger) Run() int {
-	// setup logggers to write to stdout/stderr
+	// setup loggers to write to stdout/stderr
 	g.out = log.New(g.Stdout, "", 0)
 	g.err = log.New(g.Stderr, "", 0)
 
@@ -102,10 +102,6 @@ func (g *GoTagger) Run() int {
 	r.Config.PushTag = g.pushTag
 	r.Config.RemoteName = g.remoteName
 	r.Config.VersionPrefix = g.versionPrefix
-
-	if err := os.Chdir(path); err != nil {
-		g.err.Println("error: ", err)
-	}
 
 	versions, err := r.TagRepo()
 	if err != nil {
