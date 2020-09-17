@@ -1,10 +1,10 @@
 <!-- markdownlint-disable -->
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
 
 - [Changelog](#changelog)
-    - [[v0.5.0] - 2020/08/17](#v050-20200817)
+    - [[v0.5.0] - 2020/09/17](#v050-20200917)
         - [Feature](#feature)
         - [Fix](#fix)
         - [Refactor](#refactor)
@@ -29,6 +29,7 @@
 <!-- markdownlint-enable -->
 
 <!-- markdownlint-disable MD013 MD024 -->
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
@@ -36,7 +37,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v0.5.0] - 2020/08/17
+## [v0.5.0] - 2020/09/17
 
 ### Feature
 
@@ -45,11 +46,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   This is a list of module names
   or whole paths
   to ignore.
+
 - Add a `PreMajor` option to `Config`.
 
   When `PreMajor` is true, `gotagger` will not rev the major version to 1,
   even if commits are flagged as breaking changes. This has no effect if the
   major version is 1 or higher.
+
 - `TagRepo` and `ModuleVersions` validate
   that a release commit references only modules that are changed by the commit
   and that the commit references all of the changed modules.
@@ -61,6 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   In a multi-module repository,
   `Version` returns the version of the first module found.
+
 - Add support for tagging any go module via release commits.
 
   A release commit may contain a `Modules` footer
@@ -81,7 +85,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   This is preparing for full go module support.
   The existing commit parsing
   and git repository interactions
-  won't scale to solve the problem of tagging sumodules.
+  won't scale to solve the problem of tagging modules.
   These packages will remain until the v1.0.0 release of `gotagger`.
 
 ## [v0.4.0] - 2019/07/10
@@ -89,12 +93,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - The `gotagger` cli now takes
-`-remote`
-and `-prefix`
-options to set the name
-of the remote to push to
-and the version prefix,
-respectively.
+  `-remote`
+  and `-prefix`
+  options to set the name
+  of the remote to push to
+  and the version prefix,
+  respectively.
 
 ### Fixed
 
@@ -153,7 +157,7 @@ respectively.
 - marker package for parsing commmit markers
 - basic cli capability: printing the new version and tagging a repo
 
-[Unreleased]: https://github.com/sassoftware/gotagger/compare/v0.5.0...master
+[unreleased]: https://github.com/sassoftware/gotagger/compare/v0.5.0...master
 [v0.5.0]: https://github.com/sassoftware/gotagger/compare/v0.4.0...v0.5.0
 [v0.4.0]: https://github.com/sassoftware/gotagger/compare/v0.3.1...v0.4.0
 [v0.3.1]: https://github.com/sassoftware/gotagger/compare/v0.3.0...v0.3.1
