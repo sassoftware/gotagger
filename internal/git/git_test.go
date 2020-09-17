@@ -10,8 +10,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"sassoftware.io/clis/gotagger/internal/testutils"
@@ -41,43 +39,37 @@ func TestNew_no_repo(t *testing.T) {
 }
 
 func TestCreateTag(t *testing.T) {
-	repo, path, teardown := testutils.NewGitRepo(t)
-	defer teardown()
-
-	testutils.SimpleGitRepo(t, repo, path)
-
-	r, err := New(path)
-	if err != nil {
-		t.Fatal(err)
+	tests := []struct {
+		message string
+		signed  bool
+		want    []string
+	}{
+		{
+			want: []string{"--git-dir", ".git", "tag", "-m", "Release v1.0.0", "v1.0.0", "hash"},
+		},
+		{
+			message: "message",
+			want:    []string{"--git-dir", ".git", "tag", "-m", "message", "v1.0.0", "hash"},
+		},
+		{
+			message: "message",
+			signed:  true,
+			want:    []string{"--git-dir", ".git", "tag", "-s", "-m", "message", "v1.0.0", "hash"},
+		},
+		{
+			signed: true,
+			want:   []string{"--git-dir", ".git", "tag", "-s", "-m", "Release v1.0.0", "v1.0.0", "hash"},
+		},
 	}
 
-	head, err := r.Head()
-	if err != nil {
-		t.Fatal(err)
-	}
+	t.Parallel()
+	for _, tt := range tests {
+		t.Run(fmt.Sprint(tt.want), func(t *testing.T) {
+			tt := tt
 
-	name := "tag-name"
-	message := "tag message"
-
-	tag, err := r.CreateTag(head.Hash, name, message)
-	if err != nil {
-		t.Fatalf("CreateTag returned an error: %v", err)
-	}
-
-	if got, want := tag.Name, name; got != want {
-		t.Errorf("CreateTag returned a tag name %q, want %q", got, want)
-	}
-	if got, want := tag.Message, message+"\n"; got != want {
-		t.Errorf("CreateTag returned a tag message %q, want %q", got, want)
-	}
-
-	// check default message
-	tag, err = r.CreateTag(head.Hash, "other-tag", "")
-	if err != nil {
-		t.Fatalf("CreateTag returned an error: %v", err)
-	}
-	if got, want := tag.Message, "Release other-tag\n"; got != want {
-		t.Errorf("CreateTag returned a tag message %q, want %q", got, want)
+			r := &Repository{GitDir: ".git", Path: "path", runner: mockRunGitCommand(t, tt.want, "path")}
+			_ = r.CreateTag("hash", "v1.0.0", tt.message, tt.signed)
+		})
 	}
 }
 
@@ -102,42 +94,11 @@ func TestHead(t *testing.T) {
 	}
 }
 
-func TestPushTag(t *testing.T) {
-	repo, path, teardown := testutils.NewGitRepo(t)
-	defer teardown()
-
-	testutils.SimpleGitRepo(t, repo, path)
-
-	tmpdir, err := ioutil.TempDir("", "gotagger-push-tag-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpdir)
-
-	if _, err := git.PlainClone(tmpdir, false, &git.CloneOptions{
-		URL: path,
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	r, err := New(tmpdir)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	head, err := r.Head()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	tag, err := r.CreateTag(head.Hash, "tag", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := r.PushTags([]*object.Tag{tag}, "origin"); err != nil {
-		t.Errorf("PushTag returned an error: %v", err)
-	}
+func TestPushTags(t *testing.T) {
+	wantArgs := []string{"--git-dir", ".git", "push", "origin", "refs/tags/v1.0.0:refs/tags/v1.0.0"}
+	wantPath := "path"
+	r := &Repository{GitDir: ".git", Path: "path", runner: mockRunGitCommand(t, wantArgs, wantPath)}
+	_ = r.PushTags([]string{"v1.0.0"}, "origin")
 }
 
 func TestPushTag_no_remote(t *testing.T) {
@@ -156,15 +117,15 @@ func TestPushTag_no_remote(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tag, err := r.CreateTag(head.Hash, "tag", "")
-	if err != nil {
+	if err := r.CreateTag(head.Hash, "tag", "", false); err != nil {
 		t.Fatal(err)
 	}
 
 	// we don't expect this to work, since no remote is configured
-	if got, want := r.PushTags([]*object.Tag{tag}, "remote"), "remote not found"; got.Error() != want {
-		t.Errorf("PushTag returned error %v, want %v", got, want)
+	if err := r.PushTags([]string{"tag"}, "remote"); assert.Error(t, err) {
+		assert.Contains(t, err.Error(), "fatal: 'remote' does not appear to be a git repository")
 	}
+
 }
 
 func TestRevList(t *testing.T) {
@@ -405,5 +366,14 @@ func Test_hasPrefix(t *testing.T) {
 				t.Errorf("hasPrefix returned %v, want %v", got, want)
 			}
 		})
+	}
+}
+
+// tests that inject a mock runner function
+func mockRunGitCommand(t *testing.T, wantArgs []string, wantPath string) func([]string, string) (string, error) {
+	return func(args []string, path string) (string, error) {
+		assert.Equal(t, wantArgs, args)
+		assert.Equal(t, wantPath, path)
+		return "", nil
 	}
 }

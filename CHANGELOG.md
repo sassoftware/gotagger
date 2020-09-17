@@ -4,10 +4,12 @@
 
 
 - [Changelog](#changelog)
+    - [[Unreleased]](#unreleased)
+        - [Refactor](#refactor)
     - [[v0.5.0] - 2020/09/17](#v050-20200917)
         - [Feature](#feature)
         - [Fix](#fix)
-        - [Refactor](#refactor)
+        - [Refactor](#refactor-1)
     - [[v0.4.0] - 2019/07/10](#v040-20190710)
         - [Added](#added)
         - [Fixed](#fixed)
@@ -36,6 +38,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Refactor
+
+- Removed remaining use of github.com/go-git/go-git outside of the test suite.
 
 ## [v0.5.0] - 2020/09/17
 
@@ -154,10 +162,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - git package for interacting with git repository
-- marker package for parsing commmit markers
+- marker package for parsing commit markers
 - basic cli capability: printing the new version and tagging a repo
 
-[unreleased]: https://github.com/sassoftware/gotagger/compare/v0.5.0...master
+[Unreleased]: https://github.com/sassoftware/gotagger/compare/v0.5.0...master
 [v0.5.0]: https://github.com/sassoftware/gotagger/compare/v0.4.0...v0.5.0
 [v0.4.0]: https://github.com/sassoftware/gotagger/compare/v0.3.1...v0.4.0
 [v0.3.1]: https://github.com/sassoftware/gotagger/compare/v0.3.0...v0.3.1

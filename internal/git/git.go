@@ -10,12 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/config"
-	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/plumbing/object"
 	"sassoftware.io/clis/gotagger/internal/commit"
 )
 
@@ -44,7 +39,6 @@ type Change struct {
 type Repository struct {
 	GitDir string
 	Path   string
-	Repo   *git.Repository
 
 	runner func([]string, string) (string, error)
 }
@@ -65,15 +59,9 @@ func New(path string) (*Repository, error) {
 		}
 	}
 
-	r, err := git.PlainOpen(path)
-	if err != nil {
-		return nil, err
-	}
-
 	repo := &Repository{
 		GitDir: gitDir,
 		Path:   path,
-		Repo:   r,
 		runner: runGitCommand,
 	}
 
@@ -83,41 +71,37 @@ func New(path string) (*Repository, error) {
 // CreateTag tags a commit in a git repo.
 //
 // If prefix is a non-empty string, then the version will be prefixed with that string.
-func (r *Repository) CreateTag(hash string, name, message string) (*object.Tag, error) {
+func (r *Repository) CreateTag(hash, name, message string, signed bool) error {
 	if message == "" {
 		message = "Release " + name
 	}
-	cfg, err := r.Repo.Config()
-	if err != nil {
-		return nil, err
+
+	args := []string{"tag"}
+	if signed {
+		args = append(args, "-s")
 	}
-	ref, err := r.Repo.CreateTag(name, plumbing.NewHash(hash), &git.CreateTagOptions{
-		Message: message,
-		Tagger: &object.Signature{
-			Email: cfg.Raw.Section("user").Option("email"),
-			Name:  cfg.Raw.Section("user").Option("name"),
-			When:  time.Now(),
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-	return r.Repo.TagObject(ref.Hash())
+
+	args = append(args, "-m", message, name, hash)
+
+	_, err := r.run(args)
+	return err
 }
 
-func (r *Repository) DeleteTags(tags []*object.Tag) error {
+func (r *Repository) DeleteTags(tags []string) error {
 	var errorMsg string
 	for _, tag := range tags {
-		if terr := r.Repo.DeleteTag(tag.Name); terr != nil {
+		if _, terr := r.run([]string{"tag", "-d", tag}); terr != nil {
 			if errorMsg == "" {
 				errorMsg = "could not delete tags:"
 			}
 			errorMsg += "\n\t" + terr.Error()
 		}
 	}
+
 	if errorMsg != "" {
 		return errors.New(errorMsg)
 	}
+
 	return nil
 }
 
@@ -132,21 +116,21 @@ func (r *Repository) Head() (Commit, error) {
 }
 
 // PushTag pushes tag to remote.
-func (r *Repository) PushTag(tag *object.Tag, remote string) error {
-	return r.PushTags([]*object.Tag{tag}, remote)
+func (r *Repository) PushTag(tag string, remote string) error {
+	return r.PushTags([]string{tag}, remote)
 }
 
 // PushTags pushes tags to the remote repository remote.
-func (r *Repository) PushTags(tags []*object.Tag, remote string) error {
-	refSpecs := make([]config.RefSpec, len(tags))
+func (r *Repository) PushTags(tags []string, remote string) error {
+	refSpecs := make([]string, len(tags))
 	for i, tag := range tags {
-		refname := "refs/tags/" + tag.Name
-		refSpecs[i] = config.RefSpec(refname + ":" + refname)
+		refname := "refs/tags/" + tag
+		refSpecs[i] = refname + ":" + refname
 	}
-	return r.Repo.Push(&git.PushOptions{
-		RemoteName: remote,
-		RefSpecs:   refSpecs,
-	})
+
+	args := append([]string{"push", remote}, refSpecs...)
+	_, err := r.run(args)
+	return err
 }
 
 // RevList returns a slice of commits from start to end.

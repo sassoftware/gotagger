@@ -12,7 +12,6 @@ import (
 	"unicode"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/go-git/go-git/v5/plumbing/object"
 	"golang.org/x/mod/modfile"
 	ggit "sassoftware.io/clis/gotagger/git"
 	"sassoftware.io/clis/gotagger/internal/commit"
@@ -169,17 +168,16 @@ func (g *Gotagger) TagRepo() ([]string, error) {
 	// determine if we should create and push a tag or not
 	if c.Type == commit.TypeRelease && g.Config.CreateTag {
 		// create tag
-		tags := make([]*object.Tag, len(versions))
-		for i, ver := range versions {
-			tag, err := g.repo.CreateTag(c.Hash, ver, "")
-			if err != nil {
+		tags := make([]string, 0, len(versions))
+		for _, ver := range versions {
+			if err := g.repo.CreateTag(c.Hash, ver, "", false); err != nil {
 				// clean up tags we already created
 				if terr := g.repo.DeleteTags(tags); terr != nil {
 					err = fmt.Errorf("%w\n%s", err, terr)
 				}
 				return nil, err
 			}
-			tags[i] = tag
+			tags = append(tags, ver)
 		}
 
 		// push tags
