@@ -100,21 +100,9 @@ func New(path string) (*Gotagger, error) {
 //
 // If module names are passed in, then only the versions for those modules are
 // returned.
-//
-// If HEAD is a release commit, then every module referenced by the commit
-// message must contain at least one file with changes in the commit.
 func (g *Gotagger) ModuleVersions(names ...string) ([]string, error) {
 	modules, err := g.findAllModules(names)
 	if err != nil {
-		return nil, err
-	}
-
-	c, err := g.repo.Head()
-	if err != nil {
-		return nil, err
-	}
-
-	if _, err := g.validateCommit(c, modules); err != nil {
 		return nil, err
 	}
 
@@ -130,13 +118,14 @@ func (g *Gotagger) ModuleVersions(names ...string) ([]string, error) {
 // created for each module listed. In this case if the root module is not
 // explicitly included in a Modules footer then it will not be included.
 func (g *Gotagger) TagRepo() ([]string, error) {
-	c, err := g.repo.Head()
+	// get all modules, if any
+	modules, err := g.findAllModules(nil)
 	if err != nil {
 		return nil, err
 	}
 
-	// get all modules, if any
-	modules, err := g.findAllModules(nil)
+	// get the current HEAD commit
+	c, err := g.repo.Head()
 	if err != nil {
 		return nil, err
 	}
