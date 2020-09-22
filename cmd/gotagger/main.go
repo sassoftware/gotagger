@@ -35,10 +35,6 @@ var (
 	AppVersion = "dev"
 	Commit     = "unknown"
 	BuildDate  = "none"
-
-	// profiling options
-	cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
-	memprofile = flag.String("memprofile", "", "write memory profile to file")
 )
 
 // GoTagger represents a specific execution of the gotagger cli
@@ -68,19 +64,48 @@ func (g *GoTagger) Run() int {
 
 	flags := flag.NewFlagSet(AppName, flag.ContinueOnError)
 	flags.SetOutput(g.Stderr)
+
 	flags.BoolVar(&g.pushTag, "push", g.boolEnv("push", false), "push the just created tag, implies -release")
 	flags.StringVar(&g.remoteName, "remote", g.stringEnv("remote", "origin"), "name of the remote to push tags to")
 	flags.BoolVar(&g.showVersion, "version", false, "show version information")
 	flags.BoolVar(&g.tagRelease, "release", g.boolEnv("release", false), "tag HEAD with the current version if it is a release commit")
 	flags.StringVar(&g.versionPrefix, "prefix", g.stringEnv("prefix", "v"), "set a prefix for versions")
 
-	// ignore profiling options
-	flags.String("cpuprofile", "", "write cpu profile to file")
-	flags.String("memprofile", "", "write memory profile to file")
+	// profiling options
+	cpuprofile := flags.String("cpuprofile", "", "write cpu profile to file")
+	memprofile := flags.String("memprofile", "", "write memory profile to file")
 
 	g.setUsage(flags)
 	if err := flags.Parse(g.Args[1:]); err != nil {
 		return genericErrorExitCode
+	}
+
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal("error: could not create CPU profile:", err)
+		}
+		defer f.Close()
+
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("error: could not start CPU profile:", err)
+		}
+		defer pprof.StopCPUProfile()
+	}
+
+	if *memprofile != "" {
+		defer func() {
+			f, err := os.Create(*memprofile)
+			if err != nil {
+				log.Fatal("error: could not create memory profile:", err)
+			}
+			defer f.Close()
+
+			runtime.GC()
+			if err := pprof.WriteHeapProfile(f); err != nil {
+				log.Fatal("error: could not write memory profile:", err)
+			}
+		}()
 	}
 
 	if g.showVersion {
@@ -174,22 +199,9 @@ func versionInfo(version, commit, date string) string {
 }
 
 func main() {
-	if *cpuprofile != "" {
-		f, err := os.Create(*cpuprofile)
-		if err != nil {
-			log.Fatal("error: could not create CPU profile:", err)
-		}
-		defer f.Close()
-
-		if err := pprof.StartCPUProfile(f); err != nil {
-			log.Fatal("error: could not start CPU profile:", err)
-		}
-		defer pprof.StopCPUProfile()
-	}
-
 	wd, err := os.Getwd()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to get current working directory: %s", err)
+		fmt.Fprintln(os.Stderr, "error: failed to get current working directory: ", err)
 		os.Exit(genericErrorExitCode)
 	}
 
@@ -200,20 +212,6 @@ func main() {
 		Stderr:     os.Stdin,
 		WorkingDir: wd,
 	}
-	rc := exc.Run()
 
-	if *memprofile != "" {
-		f, err := os.Create(*memprofile)
-		if err != nil {
-			log.Fatal("error: could not create memory profile:", err)
-		}
-		defer f.Close()
-
-		runtime.GC()
-		if err := pprof.Lookup("heap").WriteTo(f, 0); err != nil {
-			log.Fatal("error: could not write memory profile:", err)
-		}
-	}
-
-	os.Exit(rc)
+	os.Exit(exc.Run())
 }
