@@ -4,11 +4,13 @@
 
 
 - [Changelog](#changelog)
+    - [[v0.5.2] - 2020/09/22](#v052-20200922)
+        - [Fix](#fix)
     - [[v0.5.1] - 2020/09/17](#v051-20200917)
         - [Refactor](#refactor)
     - [[v0.5.0] - 2020/09/17](#v050-20200917)
         - [Feature](#feature)
-        - [Fix](#fix)
+        - [Fix](#fix-1)
         - [Refactor](#refactor-1)
     - [[v0.4.0] - 2019/07/10](#v040-20190710)
         - [Added](#added)
@@ -38,6 +40,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [v0.5.2] - 2020/09/22
+
+### Fix
+
+- ModuleVersions does not validate release commits.
+  This behavior prevented using ModuleVersions
+  to report the version of modules not in the release commit.
 
 ## [v0.5.1] - 2020/09/17
 
