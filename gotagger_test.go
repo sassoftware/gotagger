@@ -497,6 +497,330 @@ func TestGotagger_TagRepo(t *testing.T) {
 	}
 }
 
+func TestGotagger_TagRepo_ignore_modules(t *testing.T) {
+	tests := []struct {
+		title    string
+		repoFunc setupRepoFunc
+		message  string
+		files    []testutils.FileCommit
+		want     []string
+	}{
+		{
+			title: "release root v1 on master implicit",
+			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
+				masterV1GitRepo(t, r, p)
+
+				testutils.CommitFile(t, r, p, "foo.go", "feat: add foo.go", []byte("foo\n"))
+			},
+			message: "release: the foos\n",
+			files: []testutils.FileCommit{
+				{
+					Path:     "CHANGELOG.md",
+					Contents: []byte("# Foo Change Log\n"),
+				},
+			},
+			want: []string{"v1.1.0"},
+		},
+		{
+			title: "release root v1 on master explicit",
+			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
+				masterV1GitRepo(t, r, p)
+
+				testutils.CommitFile(t, r, p, "foo.go", "feat: add foo.go", []byte("foo\n"))
+			},
+			message: "release: the foos\n\nModules: foo\n",
+			files: []testutils.FileCommit{
+				{
+					Path:     "CHANGELOG.md",
+					Contents: []byte("# Foo Change Log\n"),
+				},
+			},
+			want: []string{"v1.1.0"},
+		},
+		{
+			title: "release bar v1 on master",
+			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
+				masterV1GitRepo(t, r, p)
+
+				testutils.CommitFile(t, r, p, filepath.Join("bar", "bar.go"), "feat: add bar/bar.go", []byte("bar\n"))
+			},
+			message: "release: the bars\n\nModules: foo/bar",
+			files: []testutils.FileCommit{
+				{
+					Path:     filepath.Join("bar", "CHANGELOG.md"),
+					Contents: []byte("# Bar Change Log\n"),
+				},
+			},
+			want: []string{"v1.1.0"},
+		},
+		{
+			title: "release all v1 on master",
+			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
+				masterV1GitRepo(t, r, p)
+
+				testutils.CommitFile(t, r, p, "foo.go", "feat: add foo.go", []byte("foo\n"))
+				testutils.CommitFile(t, r, p, filepath.Join("bar", "bar.go"), "feat: add bar/bar.go", []byte("bar\n"))
+			},
+			message: "release: all the things\n\nModules: foo, foo/bar",
+			files: []testutils.FileCommit{
+				{
+					Path:     "CHANGELOG.md",
+					Contents: []byte("# Foo Change Log\n"),
+				},
+				{
+					Path:     filepath.Join("bar", "CHANGELOG.md"),
+					Contents: []byte("# Bar Change Log\n"),
+				},
+			},
+			want: []string{"v1.1.0"},
+		},
+		{
+			title: "release root v2 on master implicit",
+			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
+				masterV2GitRepo(t, r, p)
+
+				testutils.CommitFile(t, r, p, "foo.go", "feat: add foo.go", []byte("foo\n"))
+			},
+			message: "release: the foos\n",
+			files: []testutils.FileCommit{
+				{
+					Path:     "CHANGELOG.md",
+					Contents: []byte("# Foo Change Log\n"),
+				},
+			},
+			want: []string{"v3.0.0"},
+		},
+		{
+			title: "release root v2 on master explicit",
+			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
+				masterV2GitRepo(t, r, p)
+
+				testutils.CommitFile(t, r, p, "foo.go", "feat: add foo.go", []byte("foo\n"))
+			},
+			message: "release: the foos\n\nModules: foo/v2\n",
+			files: []testutils.FileCommit{
+				{
+					Path:     "CHANGELOG.md",
+					Contents: []byte("# Foo Change Log\n"),
+				},
+			},
+			want: []string{"v3.0.0"},
+		},
+		{
+			title: "release bar v2 on master",
+			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
+				masterV2GitRepo(t, r, p)
+
+				testutils.CommitFile(t, r, p, filepath.Join("bar", "bar.go"), "feat: add bar/bar.go", []byte("bar\n"))
+			},
+			message: "release: the bars\n\nModules: foo/bar/v2",
+			files: []testutils.FileCommit{
+				{
+					Path:     filepath.Join("bar", "CHANGELOG.md"),
+					Contents: []byte("# Bar Change Log\n"),
+				},
+			},
+			want: []string{"v3.0.0"},
+		},
+		{
+			title: "release all v2 on master",
+			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
+				masterV2GitRepo(t, r, p)
+
+				testutils.CommitFile(t, r, p, "foo.go", "feat: add foo.go", []byte("foo\n"))
+				testutils.CommitFile(t, r, p, filepath.Join("bar", "bar.go"), "feat: add bar/bar.go", []byte("bar\n"))
+			},
+			message: "release: all the things\n\nModules: foo/bar/v2, foo/v2",
+			files: []testutils.FileCommit{
+				{
+					Path:     "CHANGELOG.md",
+					Contents: []byte("# Foo Change Log\n"),
+				},
+				{
+					Path:     filepath.Join("bar", "CHANGELOG.md"),
+					Contents: []byte("# Bar Change Log\n"),
+				},
+			},
+			want: []string{"v3.0.0"},
+		},
+		{
+			title: "release foo v1 implicit directory",
+			repoFunc: func(t testutils.T, repo *sgit.Repository, path string) {
+				v2DirGitRepo(t, repo, path)
+
+				// update foo
+				testutils.CommitFile(t, repo, path, "foo.go", "feat: add foo.go\n", []byte("foo\n"))
+			},
+			message: "release: the foos\n",
+			files: []testutils.FileCommit{
+				{
+					Path:     "CHANGELOG.md",
+					Contents: []byte("# Foo Change Log\n"),
+				},
+			},
+			want: []string{"v3.0.0"},
+		},
+		{
+			title: "release foo v1 explicit directory",
+			repoFunc: func(t testutils.T, repo *sgit.Repository, path string) {
+				v2DirGitRepo(t, repo, path)
+
+				// update foo
+				testutils.CommitFile(t, repo, path, "foo.go", "feat: add foo.go\n", []byte("foo\n"))
+			},
+			message: "release: the foos\n\nModules: foo\n",
+			files: []testutils.FileCommit{
+				{
+					Path:     "CHANGELOG.md",
+					Contents: []byte("# Foo Change Log\n"),
+				},
+			},
+			want: []string{"v3.0.0"},
+		},
+		{
+			title: "release foo v2 explicit directory",
+			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
+				v2DirGitRepo(t, r, p)
+
+				testutils.CommitFile(t, r, p, filepath.Join("v2", "foo.go"), "feat: add v2/foo.go", []byte("foo\n"))
+			},
+			message: "release: the foos\n\nModules: foo/v2\n",
+			files: []testutils.FileCommit{
+				{
+					Path:     filepath.Join("v2", "CHANGELOG.md"),
+					Contents: []byte("# Foo Change Log\n"),
+				},
+			},
+			want: []string{"v3.0.0"},
+		},
+		{
+			title: "release bar v1 directory",
+			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
+				v2DirGitRepo(t, r, p)
+
+				testutils.CommitFile(t, r, p, filepath.Join("bar", "bar.go"), "feat: add bar/bar.go", []byte("bar\n"))
+			},
+			message: "release: the bars\n\nModules: foo/bar\n",
+			files: []testutils.FileCommit{
+				{
+					Path:     filepath.Join("bar", "CHANGELOG.md"),
+					Contents: []byte("# Bar Change Log\n"),
+				},
+			},
+			want: []string{"v3.0.0"},
+		},
+		{
+			title: "release bar v2 directory",
+			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
+				v2DirGitRepo(t, r, p)
+
+				testutils.CommitFile(t, r, p, filepath.Join("bar", "v2", "bar.go"), "feat: add bar/v2/bar.go", []byte("bar\n"))
+			},
+			message: "release: the bars\n\nModules: foo/bar/v2\n",
+			files: []testutils.FileCommit{
+				{
+					Path:     filepath.Join("bar", "v2", "CHANGELOG.md"),
+					Contents: []byte("# Bar Change Log\n"),
+				},
+			},
+			want: []string{"v3.0.0"},
+		},
+		{
+			title: "release all v1 directory",
+			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
+				v2DirGitRepo(t, r, p)
+
+				testutils.CommitFile(t, r, p, "foo.go", "feat: add foo.go", []byte("foo\n"))
+				testutils.CommitFile(t, r, p, filepath.Join("bar", "bar.go"), "feat: add bar/bar.go", []byte("bar\n"))
+			},
+			message: "release: all the v1 things\n\nModules: foo, foo/bar",
+			files: []testutils.FileCommit{
+				{
+					Path:     "CHANGELOG.md",
+					Contents: []byte("# Foo Change Log\n"),
+				},
+				{
+					Path:     filepath.Join("bar", "CHANGELOG.md"),
+					Contents: []byte("# Bar Change Log\n"),
+				},
+			},
+			want: []string{"v3.0.0"},
+		},
+		{
+			title: "release all v2 directory",
+			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
+				v2DirGitRepo(t, r, p)
+
+				testutils.CommitFile(t, r, p, filepath.Join("v2", "foo.go"), "feat: add v2/foo.go", []byte("foo\n"))
+				testutils.CommitFile(t, r, p, filepath.Join("bar", "v2", "bar.go"), "feat: add bar/v2/bar.go", []byte("bar\n"))
+			},
+			message: "release: all the v2 things\n\nModules: foo/v2, foo/bar/v2",
+			files: []testutils.FileCommit{
+				{
+					Path:     filepath.Join("v2", "CHANGELOG.md"),
+					Contents: []byte("# Foo Change Log\n"),
+				},
+				{
+					Path:     filepath.Join("bar", "v2", "CHANGELOG.md"),
+					Contents: []byte("# Bar Change Log\n"),
+				},
+			},
+			want: []string{"v3.0.0"},
+		},
+		{
+			title: "release all directory",
+			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
+				v2DirGitRepo(t, r, p)
+
+				testutils.CommitFile(t, r, p, "foo.go", "feat: add foo.go", []byte("foo\n"))
+				testutils.CommitFile(t, r, p, filepath.Join("bar", "bar.go"), "feat: add bar/bar.go", []byte("bar\n"))
+
+				testutils.CommitFile(t, r, p, filepath.Join("v2", "foo.go"), "feat: add v2/foo.go", []byte("foo\n"))
+				testutils.CommitFile(t, r, p, filepath.Join("bar", "v2", "bar.go"), "feat: add bar/v2/bar.go", []byte("bar\n"))
+			},
+			message: "release: all the things\n\nModules: foo, foo/bar, foo/v2, foo/bar/v2\n",
+			files: []testutils.FileCommit{
+				{
+					Path:     "CHANGELOG.md",
+					Contents: []byte("# Foo Change Log\n"),
+				},
+				{
+					Path:     filepath.Join("bar", "CHANGELOG.md"),
+					Contents: []byte("# Bar Change Log\n"),
+				},
+				{
+					Path:     filepath.Join("v2", "CHANGELOG.md"),
+					Contents: []byte("# Foo Change Log\n"),
+				},
+				{
+					Path:     filepath.Join("bar", "v2", "CHANGELOG.md"),
+					Contents: []byte("# Bar Change Log\n"),
+				},
+			},
+			want: []string{"v3.0.0"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.title, func(t *testing.T) {
+			t.Parallel()
+
+			g, repo, path, teardown := newGotagger(t)
+			defer teardown()
+
+			tt.repoFunc(t, repo, path)
+
+			// create a release commit
+			testutils.CommitFiles(t, repo, path, tt.message, tt.files)
+
+			g.Config.IgnoreModules = true
+			if versions, err := g.TagRepo(); assert.NoError(t, err) {
+				assert.Equal(t, tt.want, versions)
+			}
+		})
+	}
+}
+
 func TestGotagger_TagRepo_validation_extra(t *testing.T) {
 	g, repo, path, teardown := newGotagger(t)
 	defer teardown()
@@ -590,6 +914,26 @@ func TestGotagger_Version_tag_head(t *testing.T) {
 
 	if got, err := g.Version(); assert.NoError(t, err) {
 		assert.Equal(t, version, got)
+	}
+}
+
+func TestGotagger_Version_IgnoreModules(t *testing.T) {
+	g, repo, path, teardown := newGotagger(t)
+	defer teardown()
+
+	// set PreMajor
+	g.Config.IgnoreModules = true
+
+	simpleGoRepo(t, repo, path)
+
+	// create a v2 tag
+	testutils.CreateTag(t, repo, path, "v2.0.0")
+
+	// make a feature commit
+	testutils.CommitFile(t, repo, path, "foo.go", "feat: update foo", []byte("foo contents\n"))
+
+	if got, err := g.Version(); assert.NoError(t, err) {
+		assert.Equal(t, "v2.1.0", got)
 	}
 }
 

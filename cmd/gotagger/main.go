@@ -49,6 +49,7 @@ type GoTagger struct {
 	err *log.Logger
 
 	// command-line options
+	modules       bool
 	pushTag       bool
 	remoteName    string
 	showVersion   bool
@@ -65,6 +66,7 @@ func (g *GoTagger) Run() int {
 	flags := flag.NewFlagSet(AppName, flag.ContinueOnError)
 	flags.SetOutput(g.Stderr)
 
+	flags.BoolVar(&g.modules, "modules", g.boolEnv("modules", true), "enable go module versioning")
 	flags.BoolVar(&g.pushTag, "push", g.boolEnv("push", false), "push the just created tag, implies -release")
 	flags.StringVar(&g.remoteName, "remote", g.stringEnv("remote", "origin"), "name of the remote to push tags to")
 	flags.BoolVar(&g.showVersion, "version", false, "show version information")
@@ -124,6 +126,7 @@ func (g *GoTagger) Run() int {
 		return genericErrorExitCode
 	}
 	r.Config.CreateTag = g.tagRelease || g.pushTag
+	r.Config.IgnoreModules = !g.modules
 	r.Config.PushTag = g.pushTag
 	r.Config.RemoteName = g.remoteName
 	r.Config.VersionPrefix = g.versionPrefix

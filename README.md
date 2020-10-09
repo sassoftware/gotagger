@@ -96,6 +96,20 @@ or any other post-release tasks.
 
 ### Go Module Support
 
+By default `gotagger` will enforce
+[semantic import versioning](https://github.com/golang/go/wiki/Modules#semantic-import-versioning)
+on any project that has one or more `go.mod` files.
+This means `gotagger` will ignore tags whose major version
+does not match the major version of the module,
+as well as tags whose prefix does not match the
+path to the module's `go.mod` file.
+
+For projects that are not written in go
+but do have a `go.mod` for build tooling,
+the `-modules` flag
+and `GOTAGGER_MODULES` environment variable
+can be used to disable this behavior.
+
 `gotagger` can also tag go multi-module repositories.
 To tag one ore more modules,
 include a `Modules` footer in your commit message

@@ -39,6 +39,10 @@ type Config struct {
 	// ExcludeModules is a list of module names or paths to exclude.
 	ExcludeModules []string
 
+	// IgnoreModules controls whether gotagger will ignore the existence of
+	// go.mod files when determinging how to version a project.
+	IgnoreModules bool
+
 	// RemoteName represents the name of the remote repository. Defaults to origin.
 	RemoteName string
 
@@ -118,10 +122,14 @@ func (g *Gotagger) ModuleVersions(names ...string) ([]string, error) {
 // created for each module listed. In this case if the root module is not
 // explicitly included in a Modules footer then it will not be included.
 func (g *Gotagger) TagRepo() ([]string, error) {
-	// get all modules, if any
-	modules, err := g.findAllModules(nil)
-	if err != nil {
-		return nil, err
+	// get all modules, if any, unless we're explicitly ignoring them
+	var modules []module
+	if !g.Config.IgnoreModules {
+		m, err := g.findAllModules(nil)
+		if err != nil {
+			return nil, err
+		}
+		modules = m
 	}
 
 	// get the current HEAD commit
@@ -193,9 +201,14 @@ func (g *Gotagger) TagRepo() ([]string, error) {
 // Usually this is the root module, but possibly not if the repo is a monorepo
 // with no root module.
 func (g *Gotagger) Version() (string, error) {
-	modules, err := g.findAllModules(nil)
-	if err != nil {
-		return "", err
+	// find modules unless we're explicitly ignoring them
+	var modules []module
+	if !g.Config.IgnoreModules {
+		m, err := g.findAllModules(nil)
+		if err != nil {
+			return "", err
+		}
+		modules = m
 	}
 
 	// only calculate the version of the first module found

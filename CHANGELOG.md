@@ -4,12 +4,14 @@
 
 
 - [Changelog](#changelog)
+    - [[Unreleased]](#unreleased)
+        - [Feature](#feature)
     - [[v0.5.2] - 2020/09/22](#v052-20200922)
         - [Fix](#fix)
     - [[v0.5.1] - 2020/09/17](#v051-20200917)
         - [Refactor](#refactor)
     - [[v0.5.0] - 2020/09/17](#v050-20200917)
-        - [Feature](#feature)
+        - [Feature](#feature-1)
         - [Fix](#fix-1)
         - [Refactor](#refactor-1)
     - [[v0.4.0] - 2019/07/10](#v040-20190710)
@@ -40,6 +42,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Feature
+
+- Added an `IgnoreModules` option,
+  and matching `-modules` flag,
+  to control whether `gotagger` enforces go module versioning.
+  This allows non-golang projects
+  to use a go.mod for build tooling
+  but opt-out of module versioning rules.
 
 ## [v0.5.2] - 2020/09/22
 
