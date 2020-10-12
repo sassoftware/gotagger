@@ -20,7 +20,9 @@ import (
 )
 
 const (
+	filepathSep    = string(filepath.Separator)
 	goMod          = "go.mod"
+	goModSep       = "/"
 	head           = "HEAD"
 	rootModulePath = "."
 )
@@ -262,9 +264,9 @@ func (g *Gotagger) findAllModules(include []string) (modules []module, err error
 
 		// add the directory leading up to any valid go.mod
 		relPath := strings.TrimPrefix(pth, g.repo.Path)
-		relPath = strings.TrimPrefix(relPath, "/")
+		relPath = strings.TrimPrefix(relPath, filepathSep)
 
-		if strings.HasSuffix(relPath, string(filepath.Separator)+goMod) || relPath == goMod {
+		if strings.HasSuffix(relPath, filepathSep+goMod) || relPath == goMod {
 			data, err := ioutil.ReadFile(pth)
 			if err != nil {
 				return err
@@ -287,26 +289,25 @@ func (g *Gotagger) findAllModules(include []string) (modules []module, err error
 
 				// normalize module path to ease comparisons
 				normPath := normalizePath(modPath)
-
-				// see if an exclude is a prefix of normPath
 				for _, exclude := range pathexclude {
+					// see if an exclude is a prefix of normPath
 					if strings.HasPrefix(normPath, exclude) {
 						return nil
 					}
 				}
 
-				// convert rootModule to empty string, otherwise add a trailing slash
-				modPrefix := modPath
+				// derive modPrefix from modPath
+				modPrefix := filepath.ToSlash(modPath)
 				if modPrefix == rootModulePath {
 					modPrefix = ""
 				} else {
 					// determine the major version prefix for this module
-					major := strings.TrimPrefix(versionRegex.FindString(modName), "/")
+					major := strings.TrimPrefix(versionRegex.FindString(modName), goModSep)
 
 					// strip trailing major version directory from prefix
 					modPrefix = strings.TrimSuffix(modPrefix, major)
-					if modPrefix != "" && !strings.HasSuffix(modPrefix, "/") {
-						modPrefix += "/"
+					if modPrefix != "" && !strings.HasSuffix(modPrefix, goModSep) {
+						modPrefix += goModSep
 					}
 				}
 
@@ -475,7 +476,7 @@ func (g *Gotagger) versionsModules(modules []module, commitModules []module) ([]
 		// the major version is the version part of the module name
 		// (foo/v2, foo/v3) normalized to 'X.'
 		var prefixes []string
-		if major := strings.TrimPrefix(versionRegex.FindString(mod.name), "/"); major == "" {
+		if major := strings.TrimPrefix(versionRegex.FindString(mod.name), goModSep); major == "" {
 			// no major version in module name, so v0.x and v1.x are allowed
 			prefixes = []string{mod.prefix + "v0.*", mod.prefix + "v1.*"}
 		} else {
