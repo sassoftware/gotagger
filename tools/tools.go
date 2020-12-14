@@ -1,4 +1,5 @@
-// Copyright (c) SAS Institute, Inc.
+// Copyright © 2020, SAS Institute Inc., Cary, NC, USA.  All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 // +build tools
 
@@ -8,5 +9,6 @@ import (
 	_ "github.com/AlekSi/gocov-xml"
 	_ "github.com/axw/gocov/gocov"
 	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
+	_ "github.com/goreleaser/goreleaser"
 	_ "gotest.tools/gotestsum"
 )

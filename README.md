@@ -1,18 +1,21 @@
-<!-- markdownlint-disable -->
+# gotagger
+
+## Table of Contents
+
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
-- [gotagger](#gotagger)
-    - [Usage](#usage)
-        - [Go Module Support](#go-module-support)
-    - [Using gotagger as a library](#using-gotagger-as-a-library)
+- [Overview](#overview)
+  - [Installation](#installation)
+- [Getting started](#getting-started)
+  - [Running](#running)
+  - [Go Module Support](#go-module-support)
+- [Using gotagger as a library](#using-gotagger-as-a-library)
+- [Contributing](#contributing)
+- [License](#license)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
-<!-- markdownlint-enable -->
 <!-- markdownlint-disable MD012 MD013 -->
-
-# gotagger
 
 ## Overview
 
@@ -45,7 +48,7 @@ then the patch version is incremented.
 
 You can install `gotagger`
 by downloading a pre-built binary for your OS and architecture
-from our [releases](./releases) page.
+from our [releases](https://github.com/sassoftware/gotagger/releases) page.
 
 Alternatively, you can install `gotagger` directly with `go get`.
 If you go this route,
@@ -78,7 +81,7 @@ v0.4.0
 depending on what unreleased changes exist.
 
 To tag a release,
-make any changes need to prepare your project for releasing
+make any changes needed to prepare your project for releasing
 (ie. update the change log,
 merge any feature branches).
 Then create a "release" commit and run gotagger again:
@@ -92,6 +95,13 @@ gotagger -release
 You can now perform any release builds,
 push the tag to your central git repository,
 or any other post-release tasks.
+
+`gotagger` can also push any tags it creates,
+by using the `-push` flag.
+
+```bash
+gotagger -release -push
+```
 
 
 ### Go Module Support

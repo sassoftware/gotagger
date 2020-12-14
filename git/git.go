@@ -1,5 +1,6 @@
-// Copyright (c) SAS Institute, Inc.
-//
+// Copyright © 2020, SAS Institute Inc., Cary, NC, USA.  All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 // The git package contains functions for running git commands.
 //
 // This package is deprecated and will be removed before the v1.0.0 release of gotagger.

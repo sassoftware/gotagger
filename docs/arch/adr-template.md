@@ -4,6 +4,25 @@
 - Deciders: [list everyone involved in the decision] <!-- optional -->
 - Date: [YYYY-MM-DD when the decision was last updated] <!-- optional -->
 
+## Table of Contents
+<!-- markdownlint-disable -->
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Context and Problem Statement](#context-and-problem-statement)
+- [Decision Drivers <!-- optional -->](#decision-drivers----optional---)
+- [Considered Options](#considered-options)
+- [Decision Outcome](#decision-outcome)
+  - [Positive Consequences <!-- optional -->](#positive-consequences----optional---)
+  - [Negative consequences <!-- optional -->](#negative-consequences----optional---)
+- [Pros and Cons of the Options <!-- optional -->](#pros-and-cons-of-the-options----optional---)
+  - [[option 1]](#option-1)
+  - [[option 2]](#option-2)
+- [Links <!-- optional -->](#links----optional---)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+<!-- markdownlint-enable -->
+
 Technical Story: [description | ticket/issue URL] <!-- optional -->
 
 ## Context and Problem Statement

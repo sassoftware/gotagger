@@ -57,3 +57,4 @@ tags
 
 # output directories
 /build/
+/dist/

@@ -1,22 +1,21 @@
-<!-- markdownlint-disable -->
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
-
-- [Commit markers used by gotagger](#commit-markers-used-by-gotagger)
-    - [Context and Problem Statement](#context-and-problem-statement)
-    - [Considered Options](#considered-options)
-    - [Decision Outcome](#decision-outcome)
-    - [Pros and Cons of the Options](#pros-and-cons-of-the-options)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-<!-- markdownlint-enable -->
-
 # Commit markers used by gotagger
 
 - Status: accepted
 - Deciders: Walter Scheper, Mike Camp, Bailey Hayes, Casey Hadden
 - Date: 2019/10/11
+
+## Table of Contents
+<!-- markdownlint-disable -->
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Context and Problem Statement](#context-and-problem-statement)
+- [Considered Options](#considered-options)
+- [Decision Outcome](#decision-outcome)
+- [Pros and Cons of the Options](#pros-and-cons-of-the-options)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+<!-- markdownlint-enable -->
 
 ## Context and Problem Statement
 

@@ -4,6 +4,7 @@ GOBUILD     = $(GO) build
 GOCOV       = $(TOOLBIN)/gocov
 GOCOVXML    = $(TOOLBIN)/gocov-xml
 GOINSTALL  := GOOS= GOARCH= $(GO) install
+GORELEASER  = $(TOOLBIN)/goreleaser
 LINTER      = $(TOOLBIN)/golangci-lint
 TESTER      = $(TOOLBIN)/gotestsum
 
@@ -30,6 +31,15 @@ REPORTXML   = $(REPORTDIR)/go-test.xml
 TESTFLAGS   = -- -timeout $(TIMEOUT) $(COVERFLAGS)
 TIMEOUT     = 60s
 
+# conditional flags
+ifeq ($(RELEASE_DRY_RUN),false)
+TAGFLAGS     = -release -push
+RELEASEFLAGS =
+else
+TAGFLAGS     =
+RELEASEFLAGS = --snapshot --skip-publish --rm-dist
+endif
+
 TARGET = build/$(GOOS)/gotagger
 TOOLREQS = tools/go.mod tools/go.sum
 
@@ -42,11 +52,12 @@ build: $(TARGET)
 
 .PHONY: clean
 clean:
-	$(RM) -r $(TARGET) $(REPORTDIR)
+	$(RM) $(TARGET)
+	$(RM) -r $(REPORTDIR)/ dist/
 
 .PHONY: distclean
 distclean: clean
-	$(RM) -r $(TOOLBIN)
+	$(RM) -r $(TOOLBIN)/
 
 .PHONY: format
 format: LINTFLAGS += --fix
@@ -56,7 +67,15 @@ format: lint
 lint: | $(LINTER)
 	$(LINTER) run $(LINTFLAGS)
 
-.PHONY: reports
+.PHONY: release
+release: $(TARGET) | $(GORELEASER)
+	$(TARGET) $(TAGFLAGS)
+	BUILDDATE=$(BUILDDATE) \
+	COMMIT=$(COMMIT) \
+	VERSION=$(VERSION) \
+	$(GORELEASER) $(RELEASEFLAGS)
+
+.PHONY: report
 report: TESTFLAGS := $(REPORTFLAGS) $(TESTFLAGS)
 report: test | $(GOCOV) $(GOCOVXML)
 	$(GOCOV) convert $(COVEROUT) | $(GOCOVXML) > $(COVERXML)
@@ -64,6 +83,10 @@ report: test | $(GOCOV) $(GOCOVXML)
 .PHONY: test tests
 test tests: | $(TESTER) $(REPORTDIR)
 	$(TESTER) $(TESTFLAGS) ./...
+
+.PHONY: version
+version:
+	@echo $(VERSION)
 
 $(TARGET):
 	$(GOBUILD) $(BUILDFLAGS) -o $@ ./cmd/gotagger/main.go
@@ -83,5 +106,19 @@ endef
 # tool targets
 $(eval $(call installtool,$(GOCOV),github.com/axw/gocov/gocov))
 $(eval $(call installtool,$(GOCOVXML),github.com/AlekSi/gocov-xml))
+$(eval $(call installtool,$(GORELEASER),github.com/goreleaser/goreleaser))
 $(eval $(call installtool,$(LINTER),github.com/golangci/golangci-lint/cmd/golangci-lint))
 $(eval $(call installtool,$(TESTER),gotest.tools/gotestsum))
+
+.PHONY: help
+help:
+	@printf "Available targets:\
+	\n  all         lint, build, and test code\
+	\n  build       builds gotagger exectuable\
+	\n  clean       removes generated files\
+	\n  distclean   reset's workspace to original state\
+	\n  format      format source code\
+	\n  lint        run linters on source code\
+	\n  report      generate test and coverage reports\
+	\n  test        run tests\
+	"

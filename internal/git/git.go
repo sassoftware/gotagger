@@ -1,5 +1,6 @@
-// Copyright (c) SAS Institute, Inc.
-//
+// Copyright © 2020, SAS Institute Inc., Cary, NC, USA.  All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 // The git package contains functions for running git commands.
 package git
 
