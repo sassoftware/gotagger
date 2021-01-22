@@ -266,9 +266,10 @@ func (g *Gotagger) findAllModules(include []string) (modules []module, err error
 		}
 
 		// add the directory leading up to any valid go.mod
-		relPath := strings.TrimPrefix(pth, g.repo.Path)
-		relPath = strings.TrimPrefix(relPath, filepathSep)
-
+		relPath, err := filepath.Rel(g.repo.Path, pth)
+		if err != nil {
+			return err
+		}
 		if strings.HasSuffix(relPath, filepathSep+goMod) || relPath == goMod {
 			data, err := ioutil.ReadFile(pth)
 			if err != nil {
