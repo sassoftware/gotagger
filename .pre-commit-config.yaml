@@ -1,3 +1,4 @@
+---
 default_stages: [commit]
 exclude: ^tests/data/
 repos:
@@ -8,7 +9,7 @@ repos:
         stages: [commit-msg]
         additional_dependencies: ["@commitlint/config-conventional"]
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.3.0 # Use the ref you want to point at
+    rev: v3.3.0
     hooks:
       - id: check-json
       - id: check-merge-conflict
@@ -26,7 +27,8 @@ repos:
     rev: v0.25.0
     hooks:
       - id: markdownlint
-        exclude: ^(docs/arch/adr-template\.md|\.github/ISSUE_TEMPLATE/)
+        exclude: >-
+          ^(docs/arch/adr-template\.md|\.github/ISSUE_TEMPLATE/|\.stentor\.d/)
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.25.0
     hooks:

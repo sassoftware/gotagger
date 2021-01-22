@@ -12,6 +12,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -21,6 +22,7 @@ const (
 
 type T interface {
 	Errorf(string, ...interface{})
+	FailNow()
 	Fatal(...interface{})
 	Fatalf(string, ...interface{})
 	Helper()
@@ -104,9 +106,15 @@ func NewGitRepo(t T) (repo *git.Repository, path string, teardown func()) {
 	// init git repo
 	var err error
 	repo, err = git.PlainInit(path, false)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+
+	cfg, err := repo.Config()
+	require.NoError(t, err)
+
+	cfg.User.Email = GotaggerEmail
+	cfg.User.Name = GotaggerName
+
+	require.NoError(t, repo.SetConfig(cfg))
 
 	return
 }

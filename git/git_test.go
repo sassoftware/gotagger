@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/Masterminds/semver/v3"
+	"sassoftware.io/clis/gotagger/internal/testutils"
 )
 
 // tests that inject a mock runner function
@@ -114,6 +115,9 @@ func makeGitRepo(t *testing.T) string {
 	}
 	// init git repo
 	runTestGitCommand(t, path, "init")
+	// confiure user name and email
+	runTestGitCommand(t, path, "config", "user.email", testutils.GotaggerEmail)
+	runTestGitCommand(t, path, "config", "user.name", testutils.GotaggerName)
 	// commit a file
 	commitFile(t, path, "foo", "Commit foo", []byte("foo"))
 	// commit a change to the file
