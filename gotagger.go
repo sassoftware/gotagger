@@ -115,7 +115,7 @@ func (g *Gotagger) ModuleVersions(names ...string) ([]string, error) {
 		return nil, err
 	}
 
-	return g.versions(modules)
+	return g.versions(modules, nil)
 }
 
 // TagRepo determines the curent version of the repository by parsing the commit
@@ -143,28 +143,22 @@ func (g *Gotagger) TagRepo() ([]string, error) {
 		return nil, err
 	}
 
-	// NOTE: we only validate the commit if this repository contains go modules
-	var versions []string
+	var commitModules []module
 	if len(modules) > 0 {
-		// there are go modules, so we need to do a module aware version calculation
-		// validate that if this is a release commit it is correct
-		var commitModules []module
-		commitModules, err = g.validateCommit(c, modules)
+		// there are go modules, so validate that if this is a release commit it is correct
+		commitModules, err = extractCommitModules(c, modules)
 		if err != nil {
 			return nil, err
 		}
 
-		// collect versions we need to create
-		versions, err = g.versionsModules(modules, commitModules)
-		if err != nil {
+		if err := g.validateCommit(c, modules, commitModules); err != nil {
 			return nil, err
 		}
-	} else {
-		// this is the no module case, so just do a simple version calculation
-		versions, err = g.versionsSimple()
-		if err != nil {
-			return nil, err
-		}
+	}
+
+	versions, err := g.versions(modules, commitModules)
+	if err != nil {
+		return nil, err
 	}
 
 	// determine if we should create and push a tag or not
@@ -216,16 +210,12 @@ func (g *Gotagger) Version() (string, error) {
 		modules = m
 	}
 
-	// only calculate the version of the first module found
-	if len(modules) > 0 {
-		modules = modules[:1]
-	}
-
-	versions, err := g.versions(modules)
+	versions, err := g.versions(modules, nil)
 	if err != nil {
 		return "", err
 	}
 
+	// only return the first version
 	return versions[0], nil
 }
 
@@ -396,44 +386,10 @@ func (g *Gotagger) parseCommits(cs []igit.Commit) (ctype commit.Type, breaking b
 	return ctype, breaking
 }
 
-func (g *Gotagger) validateCommit(c igit.Commit, modules []module) ([]module, error) {
+func (g *Gotagger) validateCommit(c igit.Commit, modules []module, commitModules []module) error {
 	// if no modules were found, then skip validation
 	if len(modules) == 0 {
-		return nil, nil
-	}
-
-	// map module name to module
-	moduleNameMap := map[string]module{}
-	for _, m := range modules {
-		moduleNameMap[m.name] = m
-	}
-
-	// extract modules from Modules footers
-	var commitModules []module
-	for _, footer := range c.Footers {
-		if footer.Title == "Modules" {
-			for _, moduleName := range strings.Split(footer.Text, ",") {
-				moduleName = strings.TrimSpace(moduleName)
-				m, ok := moduleNameMap[moduleName]
-				if !ok {
-					return nil, fmt.Errorf("no module %s found", moduleName)
-				}
-				commitModules = append(commitModules, m)
-			}
-		}
-	}
-
-	// default to the root module, or the first module found
-	if len(commitModules) == 0 {
-		// find the root module, defaulting to the first module found
-		rootModule := modules[0]
-		for _, m := range modules {
-			if m.path == rootModulePath {
-				rootModule = m
-				break
-			}
-		}
-		commitModules = []module{rootModule}
+		return nil
 	}
 
 	if c.Type == commit.TypeRelease {
@@ -448,16 +404,16 @@ func (g *Gotagger) validateCommit(c igit.Commit, modules []module) ([]module, er
 		}
 
 		if err := validateCommitModules(commitModules, changedModules); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	return commitModules, nil
+	return nil
 }
 
-func (g *Gotagger) versions(modules []module) (versions []string, err error) {
+func (g *Gotagger) versions(modules, commitModules []module) (versions []string, err error) {
 	if len(modules) != 0 {
-		versions, err = g.versionsModules(modules, nil)
+		versions, err = g.versionsModules(modules, commitModules)
 	} else {
 		versions, err = g.versionsSimple()
 	}
@@ -569,6 +525,46 @@ func (s sortByPath) Less(i, j int) bool {
 		return true
 	}
 	return si.path < sj.path
+}
+
+// extractCommitModules returns the modules referenced in the commit Footer(s).
+// If there are no modules referenced, then this returns the root module.
+func extractCommitModules(c igit.Commit, modules []module) ([]module, error) {
+	// map module name to module for faster lookup
+	moduleNameMap := map[string]module{}
+	for _, m := range modules {
+		moduleNameMap[m.name] = m
+	}
+
+	// extract modules from Modules footers
+	var commitModules []module
+	for _, footer := range c.Footers {
+		if footer.Title == "Modules" {
+			for _, moduleName := range strings.Split(footer.Text, ",") {
+				moduleName = strings.TrimSpace(moduleName)
+				if m, ok := moduleNameMap[moduleName]; ok {
+					commitModules = append(commitModules, m)
+				} else {
+					return nil, fmt.Errorf("no module %s found", moduleName)
+				}
+			}
+		}
+	}
+
+	// default to the root module, or the first module found
+	if len(commitModules) == 0 {
+		// find the root module, defaulting to the first module found
+		rootModule := modules[0]
+		for _, m := range modules {
+			if m.path == rootModulePath {
+				rootModule = m
+				break
+			}
+		}
+		commitModules = []module{rootModule}
+	}
+
+	return commitModules, nil
 }
 
 func filterCommitsByModule(mod module, commits []igit.Commit, modules []module) []igit.Commit {
