@@ -28,7 +28,8 @@ LINTFLAGS   =
 REPORTFLAGS = --jsonfile $(REPORTJSON) --junitfile $(REPORTXML)
 REPORTJSON  = $(REPORTDIR)/go-test.json
 REPORTXML   = $(REPORTDIR)/go-test.xml
-TESTFLAGS   = -- -timeout $(TIMEOUT) $(COVERFLAGS)
+TESTFLAGS   = --format=$(TESTFORMAT) -- -timeout $(TIMEOUT) $(COVERFLAGS)
+TESTFORMAT  = short
 TIMEOUT     = 60s
 
 # conditional flags
