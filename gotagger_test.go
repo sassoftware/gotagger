@@ -107,14 +107,14 @@ func TestGotagger_ModuleVersion(t *testing.T) {
 	}
 }
 
-func TestGotagger_TagRepo(t *testing.T) {
+func TestGotagger_versioning(t *testing.T) {
 	tests := []struct {
 		title    string
 		prefix   string
 		repoFunc setupRepoFunc
 		message  string
 		files    []testutils.FileCommit
-		want     []string
+		checks   map[string]gotaggerCheckFunc
 	}{
 		{
 			title:    "v-prefix tags",
@@ -127,7 +127,10 @@ func TestGotagger_TagRepo(t *testing.T) {
 					Contents: []byte("# Foo Change Log\n"),
 				},
 			},
-			want: []string{"v1.0.1"},
+			checks: map[string]gotaggerCheckFunc{
+				"TagRepo": checkTagRepo([]string{"v1.0.1"}),
+				"Version": checkVersion("v1.0.1"),
+			},
 		},
 		{
 			title:    "empty prefix tags",
@@ -140,7 +143,10 @@ func TestGotagger_TagRepo(t *testing.T) {
 					Contents: []byte("# Bar Change Log\n"),
 				},
 			},
-			want: []string{"0.2.0"},
+			checks: map[string]gotaggerCheckFunc{
+				"TagRepo": checkTagRepo([]string{"0.2.0"}),
+				"Version": checkVersion("0.2.0"),
+			},
 		},
 		{
 			title:    "v-prefix tags go mod",
@@ -153,7 +159,10 @@ func TestGotagger_TagRepo(t *testing.T) {
 					Contents: []byte("# Foo Change Log\n"),
 				},
 			},
-			want: []string{"v1.1.0"},
+			checks: map[string]gotaggerCheckFunc{
+				"TagRepo": checkTagRepo([]string{"v1.1.0"}),
+				"Version": checkVersion("v1.1.0"),
+			},
 		},
 		{
 			title:    "empty prefix tags go mod",
@@ -166,7 +175,10 @@ func TestGotagger_TagRepo(t *testing.T) {
 					Contents: []byte("# Bar Change Log\n"),
 				},
 			},
-			want: []string{"1.1.0"},
+			checks: map[string]gotaggerCheckFunc{
+				"TagRepo": checkTagRepo([]string{"1.1.0"}),
+				"Version": checkVersion("1.1.0"),
+			},
 		},
 		{
 			title:  "release root v1 on master implicit",
@@ -183,7 +195,10 @@ func TestGotagger_TagRepo(t *testing.T) {
 					Contents: []byte("# Foo Change Log\n"),
 				},
 			},
-			want: []string{"v1.1.0"},
+			checks: map[string]gotaggerCheckFunc{
+				"TagRepo": checkTagRepo([]string{"v1.1.0"}),
+				"Version": checkVersion("v1.1.0"),
+			},
 		},
 		{
 			title:  "release root v1 on master explicit",
@@ -200,7 +215,10 @@ func TestGotagger_TagRepo(t *testing.T) {
 					Contents: []byte("# Foo Change Log\n"),
 				},
 			},
-			want: []string{"v1.1.0"},
+			checks: map[string]gotaggerCheckFunc{
+				"TagRepo": checkTagRepo([]string{"v1.1.0"}),
+				"Version": checkVersion("v1.1.0"),
+			},
 		},
 		{
 			title:  "release bar v1 on master",
@@ -217,7 +235,10 @@ func TestGotagger_TagRepo(t *testing.T) {
 					Contents: []byte("# Bar Change Log\n"),
 				},
 			},
-			want: []string{"bar/v1.1.0"},
+			checks: map[string]gotaggerCheckFunc{
+				"TagRepo": checkTagRepo([]string{"bar/v1.1.0"}),
+				"Version": checkVersion("v1.0.0"),
+			},
 		},
 		{
 			title:  "release all v1 on master",
@@ -239,7 +260,10 @@ func TestGotagger_TagRepo(t *testing.T) {
 					Contents: []byte("# Bar Change Log\n"),
 				},
 			},
-			want: []string{"v1.1.0", "bar/v1.1.0"},
+			checks: map[string]gotaggerCheckFunc{
+				"TagRepo": checkTagRepo([]string{"v1.1.0", "bar/v1.1.0"}),
+				"Version": checkVersion("v1.1.0"),
+			},
 		},
 		{
 			title:  "release root v2 on master implicit",
@@ -256,7 +280,10 @@ func TestGotagger_TagRepo(t *testing.T) {
 					Contents: []byte("# Foo Change Log\n"),
 				},
 			},
-			want: []string{"v2.1.0"},
+			checks: map[string]gotaggerCheckFunc{
+				"TagRepo": checkTagRepo([]string{"v2.1.0"}),
+				"Version": checkVersion("v2.1.0"),
+			},
 		},
 		{
 			title:  "release root v2 on master explicit",
@@ -273,7 +300,10 @@ func TestGotagger_TagRepo(t *testing.T) {
 					Contents: []byte("# Foo Change Log\n"),
 				},
 			},
-			want: []string{"v2.1.0"},
+			checks: map[string]gotaggerCheckFunc{
+				"TagRepo": checkTagRepo([]string{"v2.1.0"}),
+				"Version": checkVersion("v2.1.0"),
+			},
 		},
 		{
 			title:  "release bar v2 on master",
@@ -290,7 +320,10 @@ func TestGotagger_TagRepo(t *testing.T) {
 					Contents: []byte("# Bar Change Log\n"),
 				},
 			},
-			want: []string{"bar/v2.1.0"},
+			checks: map[string]gotaggerCheckFunc{
+				"TagRepo": checkTagRepo([]string{"bar/v2.1.0"}),
+				"Version": checkVersion("v2.0.0"),
+			},
 		},
 		{
 			title:  "release all v2 on master",
@@ -312,7 +345,10 @@ func TestGotagger_TagRepo(t *testing.T) {
 					Contents: []byte("# Bar Change Log\n"),
 				},
 			},
-			want: []string{"bar/v2.1.0", "v2.1.0"},
+			checks: map[string]gotaggerCheckFunc{
+				"TagRepo": checkTagRepo([]string{"bar/v2.1.0", "v2.1.0"}),
+				"Version": checkVersion("v2.1.0"),
+			},
 		},
 		{
 			title:  "release foo v1 implicit directory",
@@ -330,7 +366,10 @@ func TestGotagger_TagRepo(t *testing.T) {
 					Contents: []byte("# Foo Change Log\n"),
 				},
 			},
-			want: []string{"v1.1.0"},
+			checks: map[string]gotaggerCheckFunc{
+				"TagRepo": checkTagRepo([]string{"v1.1.0"}),
+				"Version": checkVersion("v1.1.0"),
+			},
 		},
 		{
 			title:  "release foo v1 explicit directory",
@@ -348,7 +387,10 @@ func TestGotagger_TagRepo(t *testing.T) {
 					Contents: []byte("# Foo Change Log\n"),
 				},
 			},
-			want: []string{"v1.1.0"},
+			checks: map[string]gotaggerCheckFunc{
+				"TagRepo": checkTagRepo([]string{"v1.1.0"}),
+				"Version": checkVersion("v1.1.0"),
+			},
 		},
 		{
 			title:  "release foo v2 explicit directory",
@@ -365,7 +407,10 @@ func TestGotagger_TagRepo(t *testing.T) {
 					Contents: []byte("# Foo Change Log\n"),
 				},
 			},
-			want: []string{"v2.1.0"},
+			checks: map[string]gotaggerCheckFunc{
+				"TagRepo": checkTagRepo([]string{"v2.1.0"}),
+				"Version": checkVersion("v1.0.0"),
+			},
 		},
 		{
 			title:  "release bar v1 directory",
@@ -382,7 +427,10 @@ func TestGotagger_TagRepo(t *testing.T) {
 					Contents: []byte("# Bar Change Log\n"),
 				},
 			},
-			want: []string{"bar/v1.1.0"},
+			checks: map[string]gotaggerCheckFunc{
+				"TagRepo": checkTagRepo([]string{"bar/v1.1.0"}),
+				"Version": checkVersion("v1.0.0"),
+			},
 		},
 		{
 			title:  "release bar v2 directory",
@@ -399,7 +447,10 @@ func TestGotagger_TagRepo(t *testing.T) {
 					Contents: []byte("# Bar Change Log\n"),
 				},
 			},
-			want: []string{"bar/v2.1.0"},
+			checks: map[string]gotaggerCheckFunc{
+				"TagRepo": checkTagRepo([]string{"bar/v2.1.0"}),
+				"Version": checkVersion("v1.0.0"),
+			},
 		},
 		{
 			title:  "release all v1 directory",
@@ -421,7 +472,10 @@ func TestGotagger_TagRepo(t *testing.T) {
 					Contents: []byte("# Bar Change Log\n"),
 				},
 			},
-			want: []string{"v1.1.0", "bar/v1.1.0"},
+			checks: map[string]gotaggerCheckFunc{
+				"TagRepo": checkTagRepo([]string{"v1.1.0", "bar/v1.1.0"}),
+				"Version": checkVersion("v1.1.0"),
+			},
 		},
 		{
 			title:  "release all v2 directory",
@@ -443,7 +497,10 @@ func TestGotagger_TagRepo(t *testing.T) {
 					Contents: []byte("# Bar Change Log\n"),
 				},
 			},
-			want: []string{"v2.1.0", "bar/v2.1.0"},
+			checks: map[string]gotaggerCheckFunc{
+				"TagRepo": checkTagRepo([]string{"v2.1.0", "bar/v2.1.0"}),
+				"Version": checkVersion("v1.0.0"),
+			},
 		},
 		{
 			title:  "release all directory",
@@ -476,7 +533,31 @@ func TestGotagger_TagRepo(t *testing.T) {
 					Contents: []byte("# Bar Change Log\n"),
 				},
 			},
-			want: []string{"v1.1.0", "bar/v1.1.0", "v2.1.0", "bar/v2.1.0"},
+			checks: map[string]gotaggerCheckFunc{
+				"TagRepo": checkTagRepo([]string{"v1.1.0", "bar/v1.1.0", "v2.1.0", "bar/v2.1.0"}),
+				"Version": checkVersion("v1.1.0"),
+			},
+		},
+		{
+			title:  "release main module when submodules have feats",
+			prefix: "v",
+			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
+				simpleGoRepo(t, r, p)
+				testutils.CreateTag(t, r, p, "v1.1.0")
+				testutils.CommitFile(t, r, p, "sub/module/other", "feat: add other submodule file", []byte("contents"))
+				testutils.CommitFile(t, r, p, "foo.go", "fix: add file to foo", []byte("foo"))
+			},
+			message: "release: foo v1.1.1\n",
+			files: []testutils.FileCommit{
+				{
+					Path:     "CHANGELOG.md",
+					Contents: []byte("# Foo Change Log\n"),
+				},
+			},
+			checks: map[string]gotaggerCheckFunc{
+				"TagRepo": checkTagRepo([]string{"v1.1.1"}),
+				"Version": checkVersion("v1.1.1"),
+			},
 		},
 	}
 
@@ -493,10 +574,31 @@ func TestGotagger_TagRepo(t *testing.T) {
 			testutils.CommitFiles(t, repo, path, tt.message, tt.files)
 
 			g.Config.VersionPrefix = tt.prefix
-			if versions, err := g.TagRepo(); assert.NoError(t, err) {
-				assert.Equal(t, tt.want, versions)
+			for name, check := range tt.checks {
+				t.Run(name, func(t *testing.T) {
+					check(t, g)
+				})
 			}
 		})
+	}
+}
+
+type gotaggerCheckFunc func(*testing.T, *Gotagger)
+
+func checkTagRepo(want []string) gotaggerCheckFunc {
+	return func(t *testing.T, g *Gotagger) {
+		if versions, err := g.TagRepo(); assert.NoError(t, err) {
+			assert.Equal(t, want, versions)
+		}
+	}
+}
+
+// checkVersion only works for default version prefix
+func checkVersion(want string) gotaggerCheckFunc {
+	return func(t *testing.T, g *Gotagger) {
+		if version, err := g.Version(); assert.NoError(t, err) {
+			assert.Equal(t, want, version)
+		}
 	}
 }
 
