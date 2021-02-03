@@ -13,7 +13,7 @@ import (
 	"testing"
 
 	"github.com/Masterminds/semver/v3"
-	"sassoftware.io/clis/gotagger/internal/testutils"
+	"github.com/sassoftware/gotagger/internal/testutils"
 )
 
 // tests that inject a mock runner function

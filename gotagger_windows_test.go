@@ -4,10 +4,10 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/sassoftware/gotagger/internal/git"
+	"github.com/sassoftware/gotagger/internal/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"sassoftware.io/clis/gotagger/internal/git"
-	"sassoftware.io/clis/gotagger/internal/testutils"
 )
 
 func TestWindowsPaths(t *testing.T) {

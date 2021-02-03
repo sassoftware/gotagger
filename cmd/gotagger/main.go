@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"strings"
 
-	"sassoftware.io/clis/gotagger"
+	"github.com/sassoftware/gotagger"
 )
 
 const (
