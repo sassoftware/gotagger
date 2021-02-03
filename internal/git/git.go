@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	"sassoftware.io/clis/gotagger/internal/commit"
+	"github.com/sassoftware/gotagger/internal/commit"
 )
 
 var (

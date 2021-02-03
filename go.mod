@@ -1,4 +1,4 @@
-module sassoftware.io/clis/gotagger
+module github.com/sassoftware/gotagger
 
 go 1.14
 

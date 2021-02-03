@@ -59,7 +59,7 @@ so you can ensure you build a supported release:
 mkdir tmp
 cd tmp
 go mod init fake
-go get sassoftware.io/clis/gotagger
+go get github.com/sassoftware/gotagger
 ```
 
 
@@ -157,7 +157,7 @@ in the order they are specified in the `Modules` footer.
 ## Using gotagger as a library
 
 ```go
-import sassoftware.io/clis/gotagger
+import github.com/sassoftware/gotagger
 ```
 
 Create a Gotagger instance

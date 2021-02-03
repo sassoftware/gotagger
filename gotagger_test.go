@@ -13,10 +13,10 @@ import (
 	sgit "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/sassoftware/gotagger/internal/git"
+	"github.com/sassoftware/gotagger/internal/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"sassoftware.io/clis/gotagger/internal/git"
-	"sassoftware.io/clis/gotagger/internal/testutils"
 )
 
 type setupRepoFunc func(testutils.T, *sgit.Repository, string)

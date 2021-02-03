@@ -15,11 +15,11 @@ import (
 	"unicode"
 
 	"github.com/Masterminds/semver/v3"
+	ggit "github.com/sassoftware/gotagger/git"
+	"github.com/sassoftware/gotagger/internal/commit"
+	igit "github.com/sassoftware/gotagger/internal/git"
+	"github.com/sassoftware/gotagger/marker"
 	"golang.org/x/mod/modfile"
-	ggit "sassoftware.io/clis/gotagger/git"
-	"sassoftware.io/clis/gotagger/internal/commit"
-	igit "sassoftware.io/clis/gotagger/internal/git"
-	"sassoftware.io/clis/gotagger/marker"
 )
 
 const (

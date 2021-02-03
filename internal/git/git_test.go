@@ -11,9 +11,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/sassoftware/gotagger/internal/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"sassoftware.io/clis/gotagger/internal/testutils"
 )
 
 func TestNew(t *testing.T) {
