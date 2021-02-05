@@ -3,7 +3,11 @@
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 - [Changelog](#changelog)
+<<<<<<< HEAD
   - [[v0.6.1] - 2021-02-04](#v061---2021-02-04)
+=======
+  - [[v0.6.1] - 2021-02-05](#v061---2021-02-05)
+>>>>>>> a3b082e (release: cut the v0.6.1 release)
     - [Fixed](#fixed)
   - [[v0.6.0] - 2020/10/12](#v060---20201012)
     - [Feature](#feature)
@@ -46,7 +50,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- stentor output starts -->
-## [v0.6.1] - 2021-02-04
+## [v0.6.1] - 2021-02-05
 
 ### Fixed
 
