@@ -10,5 +10,6 @@ import (
 	_ "github.com/axw/gocov/gocov"
 	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
 	_ "github.com/goreleaser/goreleaser"
+	_ "github.com/wfscheper/stentor"
 	_ "gotest.tools/gotestsum"
 )

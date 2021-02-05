@@ -14,6 +14,7 @@ BUILDDATE := $(shell date +%Y-%m-%d)
 COMMIT    := $(shell git rev-parse HEAD)
 GOOS      := $(shell $(GO) env GOOS)
 VERSION   := $(shell $(GO) run ./cmd/gotagger)
+$(if $(VERSION),,$(error failed to determine version))
 
 # directories
 REPORTDIR = build/reports
