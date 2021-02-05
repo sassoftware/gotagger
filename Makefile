@@ -6,6 +6,7 @@ GOCOVXML    = $(TOOLBIN)/gocov-xml
 GOINSTALL  := GOOS= GOARCH= $(GO) install
 GORELEASER  = $(TOOLBIN)/goreleaser
 LINTER      = $(TOOLBIN)/golangci-lint
+STENTOR     = $(TOOLBIN)/stentor
 TESTER      = $(TOOLBIN)/gotestsum
 
 # variables
@@ -36,9 +37,11 @@ TIMEOUT     = 60s
 ifeq ($(RELEASE_DRY_RUN),false)
 TAGFLAGS     = -release -push
 RELEASEFLAGS =
+STENTORFLAGS = -release
 else
 TAGFLAGS     =
 RELEASEFLAGS = --snapshot --skip-publish --rm-dist
+STENTORFLAGS =
 endif
 
 TARGET = build/$(GOOS)/gotagger
@@ -50,6 +53,10 @@ all: lint build test
 
 .PHONY: build
 build: $(TARGET)
+
+.PHONY: changelog
+changelog: | $(STENTOR)
+	$(STENTOR) $(STENTORFLAGS) $(VERSION) "$$(git tag --list --sort=version:refname | tail -n1)"
 
 .PHONY: clean
 clean:
@@ -109,6 +116,7 @@ $(eval $(call installtool,$(GOCOV),github.com/axw/gocov/gocov))
 $(eval $(call installtool,$(GOCOVXML),github.com/AlekSi/gocov-xml))
 $(eval $(call installtool,$(GORELEASER),github.com/goreleaser/goreleaser))
 $(eval $(call installtool,$(LINTER),github.com/golangci/golangci-lint/cmd/golangci-lint))
+$(eval $(call installtool,$(STENTOR),github.com/wfscheper/stentor/cmd/stentor))
 $(eval $(call installtool,$(TESTER),gotest.tools/gotestsum))
 
 .PHONY: help
@@ -116,6 +124,7 @@ help:
 	@printf "Available targets:\
 	\n  all         lint, build, and test code\
 	\n  build       builds gotagger exectuable\
+	\n  changelog   run stentor to show changelog entry\
 	\n  clean       removes generated files\
 	\n  distclean   reset's workspace to original state\
 	\n  format      format source code\
