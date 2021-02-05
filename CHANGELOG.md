@@ -3,6 +3,8 @@
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 - [Changelog](#changelog)
+  - [[v0.6.1] - 2021-02-04](#v061---2021-02-04)
+    - [Fixed](#fixed)
   - [[v0.6.0] - 2020/10/12](#v060---20201012)
     - [Feature](#feature)
     - [Fix](#fix)
@@ -16,18 +18,18 @@
     - [Refactor](#refactor-1)
   - [[v0.4.0] - 2019/07/10](#v040---20190710)
     - [Added](#added)
-    - [Fixed](#fixed)
-  - [[v0.3.1] - 2019/12/16](#v031---20191216)
     - [Fixed](#fixed-1)
+  - [[v0.3.1] - 2019/12/16](#v031---20191216)
+    - [Fixed](#fixed-2)
   - [[v0.3.0] - 2019/11/18](#v030---20191118)
     - [Added](#added-1)
   - [[v0.2.0] - 2019/11/15](#v020---20191115)
     - [Added](#added-2)
     - [Changed](#changed)
   - [[v0.1.2] - 2019/10/14](#v012---20191014)
-    - [Fixed](#fixed-2)
-  - [[v0.1.1] - 2019/10/12](#v011---20191012)
     - [Fixed](#fixed-3)
+  - [[v0.1.1] - 2019/10/12](#v011---20191012)
+    - [Fixed](#fixed-4)
   - [[v0.1.0] - 2019/10/11](#v010---20191011)
     - [Added](#added-3)
 
@@ -42,6 +44,36 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+<!-- stentor output starts -->
+## [v0.6.1] - 2021-02-04
+
+### Fixed
+
+- When creating repositories during tests,
+  configure the user name and email
+  to avoid failures in CI.
+  [#1](https://github.com/sassoftware/gotagger/issues/1)
+- The way gotagger was determining the path of a module
+  relative to the root of the repository
+  did not work correctly for Windows paths.
+
+  This fixes the problem by using the `filepath.Rel` call instead.
+  [#3](https://github.com/sassoftware/gotagger/issues/3)
+- `Gotagger.Version()` now reports the correct version
+  when there are commits to multiple go modules.
+  [#4](https://github.com/sassoftware/gotagger/issues/4)
+- Change the module name to `github.com/sassoftware/gotagger`.
+
+  We need to use this module name until the sassoftware.io URL is ready.
+  [#7](https://github.com/sassoftware/gotagger/issues/7)
+
+
+[v0.6.1]: https://github.com/sassoftware/gotagger/compare/v0.6.0...v0.6.1
+
+
+----
+
 
 ## [v0.6.0] - 2020/10/12
 
