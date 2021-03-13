@@ -53,7 +53,9 @@ TOOLREQS = tools/go.mod tools/go.sum
 all: lint build test
 
 .PHONY: build
-build: $(TARGET)
+build:
+	$(GOBUILD) $(BUILDFLAGS) -o $(TARGET) ./cmd/gotagger/main.go
+
 
 .PHONY: changelog
 changelog: | $(STENTOR)
@@ -77,7 +79,7 @@ lint: | $(LINTER)
 	$(LINTER) run $(LINTFLAGS)
 
 .PHONY: release
-release: $(TARGET) | $(GORELEASER)
+release: build | $(GORELEASER)
 	$(TARGET) $(TAGFLAGS)
 	BUILDDATE=$(BUILDDATE) \
 	COMMIT=$(COMMIT) \
@@ -96,9 +98,6 @@ test tests: | $(TESTER) $(REPORTDIR)
 .PHONY: version
 version:
 	@echo $(VERSION)
-
-$(TARGET):
-	$(GOBUILD) $(BUILDFLAGS) -o $@ ./cmd/gotagger/main.go
 
 $(REPORTDIR) $(TOOLBIN):
 	@mkdir -p $@
