@@ -4,6 +4,7 @@
 package commit
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
@@ -50,9 +51,13 @@ func TestParse(t *testing.T) {
 		scope := rapid.StringMatching(`^\w*$`).Draw(t, "scope").(string)
 		isBreaking := rapid.Bool().Draw(t, "breaking").(bool)
 		subject := rapid.StringMatching(`^.*$`).Draw(t, "subject").(string)
-		body := rapid.SliceOf(rapid.String()).Map(func(s []string) string {
-			return strings.Join(s, "\n")
-		}).Draw(t, "body").(string)
+		body := rapid.SliceOf(
+			rapid.String().Filter(func(s string) bool { return !strings.Contains(s, ": ") }),
+		).
+			Map(func(s []string) string {
+				return strings.Join(s, "\n")
+			}).
+			Draw(t, "body").(string)
 
 		header := ctype
 		if scope != "" {
@@ -98,9 +103,13 @@ func TestParse_merge(t *testing.T) {
 		scope := rapid.StringMatching(`^\w*$`).Draw(t, "scope").(string)
 		isBreaking := rapid.Bool().Draw(t, "breaking").(bool)
 		subject := rapid.StringMatching(`^.+$`).Draw(t, "subject").(string)
-		body := rapid.SliceOf(rapid.String()).Map(func(s []string) string {
-			return strings.Join(s, "\n")
-		}).Draw(t, "body").(string)
+		body := rapid.SliceOf(
+			rapid.String().Filter(func(s string) bool { return !strings.Contains(s, ": ") }),
+		).
+			Map(func(s []string) string {
+				return strings.Join(s, "\n")
+			}).
+			Draw(t, "body").(string)
 
 		header := ctype
 		if scope != "" {
@@ -184,12 +193,24 @@ func TestParse_footer(t *testing.T) {
 			t, "bFooterTitle",
 		).(string)
 		bFooterText := rapid.
-			SliceOf(rapid.String().Filter(func(s string) bool { return s != "" })).
+			SliceOf(rapid.String().Filter(func(s string) bool {
+				if bFooterTitle != "" {
+					return s != "" && !strings.Contains(s, ": ")
+				}
+
+				return false
+			})).
 			Map(func(s []string) string { return strings.Join(s, "\n") }).
 			Draw(t, "bFooterText").(string)
 		footerTitle := rapid.StringMatching(`^([[:alnum:]][-\w ]*)?`).Draw(t, "footerTitle").(string)
 		footerText := rapid.
-			SliceOf(rapid.String().Filter(func(s string) bool { return s != "" })).
+			SliceOf(rapid.String().Filter(func(s string) bool {
+				if footerTitle != "" {
+					return s != "" && !strings.Contains(s, ": ")
+				}
+
+				return false
+			})).
 			Map(func(s []string) string { return strings.Join(s, "\n") }).
 			Draw(t, "footerText").(string)
 		input := header + "\n\n" + body + "\n\n" + bFooterTitle + ": " + bFooterText
@@ -202,19 +223,26 @@ func TestParse_footer(t *testing.T) {
 
 		// check that we got the number of headers expected
 		var want int
-		if bFooterTitle != "" && footerTitle != "" {
-			want = 2
-		} else if (bFooterTitle != "" && footerTitle == "") || (bFooterTitle == "" && footerTitle != "") {
-			want = 1
+		if bFooterTitle != "" {
+			want++
 		}
-		assert.Equal(t, want, len(c.Footers))
+		if footerTitle != "" {
+			want++
+		}
+		if got := len(c.Footers); want != got {
+			t.Errorf("wrong number of footers: want %d, got %d", want, got)
+		}
 
 		// check that we parsed a breaking change
-		assert.Equal(t, isBreaking, c.Breaking)
+		if want, got := isBreaking, c.Breaking; want != got {
+			t.Errorf("want c.Breaking == %v, got %v", want, got)
+		}
 
 		// validate that footer structs are correct
 		if isBreaking {
-			assert.Equal(t, Footer{bFooterTitle, bFooterText}, c.Footers[0])
+			if got, want := c.Footers[0], (Footer{bFooterTitle, bFooterText}); !reflect.DeepEqual(want, got) {
+				t.Errorf("expected footer %#v, got %#v", want, got)
+			}
 		}
 
 		if footerTitle != "" {
@@ -222,7 +250,9 @@ func TestParse_footer(t *testing.T) {
 			if isBreaking {
 				i = 1
 			}
-			assert.Equal(t, Footer{footerTitle, footerText}, c.Footers[i])
+			if got, want := c.Footers[i], (Footer{footerTitle, footerText}); !reflect.DeepEqual(got, want) {
+				t.Errorf("want footer %#v, got %#v", want, got)
+			}
 		}
 	})
 }
@@ -237,8 +267,14 @@ func Test_parseMessageBody(t *testing.T) {
 		input := inputBody + "\n\n" + footerTitle + ": " + footerText
 
 		body, footers, breaking := parseMessageBody(strings.Split(input, "\n"))
-		assert.Equal(t, inputBody, body)
-		assert.Equal(t, []Footer{{Title: footerTitle, Text: footerText}}, footers)
-		assert.True(t, breaking)
+		if got, want := body, inputBody; got != want {
+			t.Errorf("want body %q, got %q", want, got)
+		}
+		if got, want := footers, []Footer{{Title: footerTitle, Text: footerText}}; !reflect.DeepEqual(got, want) {
+			t.Errorf("wanted footers %#v, got %#v", want, got)
+		}
+		if !breaking {
+			t.Errorf("wanted breaking change")
+		}
 	})
 }

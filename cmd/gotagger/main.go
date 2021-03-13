@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"runtime"
 	"runtime/pprof"
 	"strconv"
@@ -79,34 +80,37 @@ func (g *GoTagger) Run() int {
 	memprofile := flags.String("memprofile", "", "write memory profile to file")
 
 	g.setUsage(flags)
-	if err := flags.Parse(g.Args[1:]); err != nil {
+	if err := flags.Parse(g.Args); err != nil {
 		return genericErrorExitCode
 	}
 
 	if *cpuprofile != "" {
-		f, err := os.Create(*cpuprofile)
+		f, err := os.Create(filepath.Join(g.WorkingDir, *cpuprofile))
 		if err != nil {
-			log.Fatal("error: could not create CPU profile:", err)
+			g.err.Println("error: could not create CPU profile:", err)
+			return genericErrorExitCode
 		}
 		defer f.Close()
 
 		if err := pprof.StartCPUProfile(f); err != nil {
-			log.Fatal("error: could not start CPU profile:", err)
+			g.err.Println("error: could not start CPU profile:", err)
+			return genericErrorExitCode
 		}
 		defer pprof.StopCPUProfile()
 	}
 
 	if *memprofile != "" {
-		defer func() {
-			f, err := os.Create(*memprofile)
-			if err != nil {
-				log.Fatal("error: could not create memory profile:", err)
-			}
-			defer f.Close()
+		f, err := os.Create(filepath.Join(g.WorkingDir, *memprofile))
+		if err != nil {
+			g.err.Println("error: could not create memory profile:", err)
+			return genericErrorExitCode
+		}
+		defer f.Close()
 
+		defer func() {
 			runtime.GC()
 			if err := pprof.WriteHeapProfile(f); err != nil {
-				log.Fatal("error: could not write memory profile:", err)
+				g.err.Fatal("error: could not write memory profile:", err)
 			}
 		}()
 	}
@@ -210,7 +214,7 @@ func main() {
 	}
 
 	exc := &GoTagger{
-		Args:       os.Args,
+		Args:       os.Args[1:],
 		Env:        os.Environ(),
 		Stdout:     os.Stdout,
 		Stderr:     os.Stdin,
