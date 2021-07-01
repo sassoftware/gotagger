@@ -126,7 +126,7 @@ include a `Modules` footer in your commit message
 containing a comma-separated list of modules to tag:
 
 ```text
-release:  the bar and baz modules
+release: the bar and baz modules
 
 Modules: foo/bar, foo/baz
 ```
