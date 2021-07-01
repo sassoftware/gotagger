@@ -993,6 +993,43 @@ func TestGotagger_TagRepo_ignore_modules(t *testing.T) {
 	}
 }
 
+func TestGotagger_TagRepo_force(t *testing.T) {
+	t.Parallel()
+
+	t.Run("force-false", func(t *testing.T) {
+		t.Parallel()
+		g, repo, path, teardown := newGotagger(t)
+		defer teardown()
+
+		simpleGoRepo(t, repo, path)
+
+		// gotagger should not create a tag, because HEAD is not a "release" commit
+		g.Config.CreateTag = true
+		if versions, err := g.TagRepo(); assert.NoError(t, err) {
+			assert.Equal(t, []string{"v1.1.0"}, versions)
+			_, gerr := repo.Tag("v1.1.0")
+			assert.Error(t, gerr)
+		}
+	})
+
+	t.Run("force-true", func(t *testing.T) {
+		t.Parallel()
+		g, repo, path, teardown := newGotagger(t)
+		defer teardown()
+
+		simpleGoRepo(t, repo, path)
+
+		// gotagger should create a tag, even though HEAD is not a "release" commit
+		g.Config.CreateTag = true
+		g.Config.Force = true
+		if versions, err := g.TagRepo(); assert.NoError(t, err) {
+			assert.Equal(t, []string{"v1.1.0"}, versions)
+			_, gerr := repo.Tag("v1.1.0")
+			assert.NoError(t, gerr)
+		}
+	})
+}
+
 func TestGotagger_TagRepo_validation_extra(t *testing.T) {
 	g, repo, path, teardown := newGotagger(t)
 	defer teardown()
