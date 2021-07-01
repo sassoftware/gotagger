@@ -54,14 +54,15 @@ type GoTagger struct {
 	err *log.Logger
 
 	// command-line options
+	configFile     string
+	dirtyIncrement string
+	force          bool
 	modules        bool
 	pushTag        bool
 	remoteName     string
 	showVersion    bool
 	tagRelease     bool
 	versionPrefix  string
-	dirtyIncrement string
-	configFile     string
 }
 
 // Runs GoTagger.
@@ -73,6 +74,7 @@ func (g *GoTagger) Run() int {
 	flags := flag.NewFlagSet(AppName, flag.ContinueOnError)
 	flags.SetOutput(g.Stderr)
 
+	flags.BoolVar(&g.force, "force", g.boolEnv("force", false), "force creation of a tag")
 	flags.BoolVar(&g.modules, "modules", g.boolEnv("modules", true), "enable go module versioning")
 	flags.BoolVar(&g.pushTag, "push", g.boolEnv("push", false), "push the just created tag, implies -release")
 	flags.StringVar(&g.remoteName, "remote", g.stringEnv("remote", "origin"), "name of the remote to push tags to")
@@ -167,7 +169,8 @@ func (g *GoTagger) Run() int {
 		}
 	}
 
-	r.Config.CreateTag = g.tagRelease || g.pushTag
+	r.Config.Force = g.force
+	r.Config.CreateTag = g.tagRelease || g.pushTag || g.force
 	r.Config.IgnoreModules = !g.modules
 	r.Config.PushTag = g.pushTag
 	r.Config.RemoteName = g.remoteName

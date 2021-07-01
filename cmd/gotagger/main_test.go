@@ -170,6 +170,12 @@ func TestGoTagger(t *testing.T) {
 				require.NoError(t, ioutil.WriteFile(filepath.Join(path, "foo"), []byte("foo\n"), 0600))
 			},
 		},
+		{
+			title:     "force flag",
+			args:      []string{"-force"},
+			wantOut:   "v1.1.0\n",
+			extraTest: assertTag("v1.1.0"),
+		},
 	}
 
 	for _, tt := range tests {
