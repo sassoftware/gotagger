@@ -109,6 +109,7 @@ func TestGotagger_ModuleVersion(t *testing.T) {
 
 func TestGotagger_versioning(t *testing.T) {
 	tests := []struct {
+		disabled bool
 		title    string
 		prefix   string
 		repoFunc setupRepoFunc
@@ -117,6 +118,7 @@ func TestGotagger_versioning(t *testing.T) {
 		checks   map[string]gotaggerCheckFunc
 	}{
 		{
+			disabled: true,
 			title:    "v-prefix tags",
 			prefix:   "v",
 			repoFunc: mixedTagRepo,
@@ -133,6 +135,7 @@ func TestGotagger_versioning(t *testing.T) {
 			},
 		},
 		{
+			disabled: true,
 			title:    "empty prefix tags",
 			prefix:   "",
 			repoFunc: mixedTagRepo,
@@ -149,6 +152,7 @@ func TestGotagger_versioning(t *testing.T) {
 			},
 		},
 		{
+			disabled: true,
 			title:    "v-prefix tags go mod",
 			prefix:   "v",
 			repoFunc: mixedTagGoRepo,
@@ -165,6 +169,7 @@ func TestGotagger_versioning(t *testing.T) {
 			},
 		},
 		{
+			disabled: true,
 			title:    "empty prefix tags go mod",
 			prefix:   "",
 			repoFunc: mixedTagGoRepo,
@@ -181,8 +186,9 @@ func TestGotagger_versioning(t *testing.T) {
 			},
 		},
 		{
-			title:  "release root v1 on master implicit",
-			prefix: "v",
+			disabled: true,
+			title:    "release root v1 on master implicit",
+			prefix:   "v",
 			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
 				masterV1GitRepo(t, r, p)
 
@@ -201,8 +207,9 @@ func TestGotagger_versioning(t *testing.T) {
 			},
 		},
 		{
-			title:  "release root v1 on master explicit",
-			prefix: "v",
+			disabled: true,
+			title:    "release root v1 on master explicit",
+			prefix:   "v",
 			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
 				masterV1GitRepo(t, r, p)
 
@@ -221,8 +228,9 @@ func TestGotagger_versioning(t *testing.T) {
 			},
 		},
 		{
-			title:  "release bar v1 on master",
-			prefix: "v",
+			disabled: true,
+			title:    "release bar v1 on master",
+			prefix:   "v",
 			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
 				masterV1GitRepo(t, r, p)
 
@@ -241,8 +249,9 @@ func TestGotagger_versioning(t *testing.T) {
 			},
 		},
 		{
-			title:  "release all v1 on master",
-			prefix: "v",
+			disabled: true,
+			title:    "release all v1 on master",
+			prefix:   "v",
 			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
 				masterV1GitRepo(t, r, p)
 
@@ -266,8 +275,9 @@ func TestGotagger_versioning(t *testing.T) {
 			},
 		},
 		{
-			title:  "release root v2 on master implicit",
-			prefix: "v",
+			disabled: true,
+			title:    "release root v2 on master implicit",
+			prefix:   "v",
 			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
 				masterV2GitRepo(t, r, p)
 
@@ -286,8 +296,9 @@ func TestGotagger_versioning(t *testing.T) {
 			},
 		},
 		{
-			title:  "release root v2 on master explicit",
-			prefix: "v",
+			disabled: true,
+			title:    "release root v2 on master explicit",
+			prefix:   "v",
 			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
 				masterV2GitRepo(t, r, p)
 
@@ -306,8 +317,9 @@ func TestGotagger_versioning(t *testing.T) {
 			},
 		},
 		{
-			title:  "release bar v2 on master",
-			prefix: "v",
+			disabled: true,
+			title:    "release bar v2 on master",
+			prefix:   "v",
 			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
 				masterV2GitRepo(t, r, p)
 
@@ -326,8 +338,9 @@ func TestGotagger_versioning(t *testing.T) {
 			},
 		},
 		{
-			title:  "release all v2 on master",
-			prefix: "v",
+			disabled: true,
+			title:    "release all v2 on master",
+			prefix:   "v",
 			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
 				masterV2GitRepo(t, r, p)
 
@@ -351,8 +364,9 @@ func TestGotagger_versioning(t *testing.T) {
 			},
 		},
 		{
-			title:  "release foo v1 implicit directory",
-			prefix: "v",
+			disabled: true,
+			title:    "release foo v1 implicit directory",
+			prefix:   "v",
 			repoFunc: func(t testutils.T, repo *sgit.Repository, path string) {
 				v2DirGitRepo(t, repo, path)
 
@@ -372,8 +386,9 @@ func TestGotagger_versioning(t *testing.T) {
 			},
 		},
 		{
-			title:  "release foo v1 explicit directory",
-			prefix: "v",
+			disabled: true,
+			title:    "release foo v1 explicit directory",
+			prefix:   "v",
 			repoFunc: func(t testutils.T, repo *sgit.Repository, path string) {
 				v2DirGitRepo(t, repo, path)
 
@@ -393,8 +408,9 @@ func TestGotagger_versioning(t *testing.T) {
 			},
 		},
 		{
-			title:  "release foo v2 explicit directory",
-			prefix: "v",
+			disabled: true,
+			title:    "release foo v2 explicit directory",
+			prefix:   "v",
 			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
 				v2DirGitRepo(t, r, p)
 
@@ -413,8 +429,9 @@ func TestGotagger_versioning(t *testing.T) {
 			},
 		},
 		{
-			title:  "release bar v1 directory",
-			prefix: "v",
+			disabled: true,
+			title:    "release bar v1 directory",
+			prefix:   "v",
 			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
 				v2DirGitRepo(t, r, p)
 
@@ -433,8 +450,9 @@ func TestGotagger_versioning(t *testing.T) {
 			},
 		},
 		{
-			title:  "release bar v2 directory",
-			prefix: "v",
+			disabled: true,
+			title:    "release bar v2 directory",
+			prefix:   "v",
 			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
 				v2DirGitRepo(t, r, p)
 
@@ -453,8 +471,9 @@ func TestGotagger_versioning(t *testing.T) {
 			},
 		},
 		{
-			title:  "release all v1 directory",
-			prefix: "v",
+			disabled: true,
+			title:    "release all v1 directory",
+			prefix:   "v",
 			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
 				v2DirGitRepo(t, r, p)
 
@@ -478,8 +497,9 @@ func TestGotagger_versioning(t *testing.T) {
 			},
 		},
 		{
-			title:  "release all v2 directory",
-			prefix: "v",
+			disabled: true,
+			title:    "release all v2 directory",
+			prefix:   "v",
 			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
 				v2DirGitRepo(t, r, p)
 
@@ -503,8 +523,9 @@ func TestGotagger_versioning(t *testing.T) {
 			},
 		},
 		{
-			title:  "release all directory",
-			prefix: "v",
+			disabled: true,
+			title:    "release all directory",
+			prefix:   "v",
 			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
 				v2DirGitRepo(t, r, p)
 
@@ -539,8 +560,9 @@ func TestGotagger_versioning(t *testing.T) {
 			},
 		},
 		{
-			title:  "release main module when submodules have feats",
-			prefix: "v",
+			disabled: true,
+			title:    "release main module when submodules have feats",
+			prefix:   "v",
 			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
 				simpleGoRepo(t, r, p)
 				testutils.CreateTag(t, r, p, "v1.1.0")
@@ -557,6 +579,37 @@ func TestGotagger_versioning(t *testing.T) {
 			checks: map[string]gotaggerCheckFunc{
 				"TagRepo": checkTagRepo([]string{"v1.1.1"}),
 				"Version": checkVersion("v1.1.1"),
+			},
+		},
+		{
+			disabled: false,
+			title:    "mulit-module commit",
+			prefix:   "v",
+			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
+				simpleGoRepo(t, r, p)
+				testutils.CreateTag(t, r, p, "v1.1.0")
+				testutils.CommitFile(t, r, p, "fix: bar", "bar", []byte(`fix bar\n`))
+				testutils.CommitFiles(t, r, p, "feat: change both modules", []testutils.FileCommit{
+					{
+						Path:     "sub/module/file",
+						Contents: []byte(`changed contents\n`),
+					},
+					{
+						Path:     "zed",
+						Contents: []byte(`zed\n`),
+					},
+				})
+			},
+			message: "release: foo v1.2.0",
+			files: []testutils.FileCommit{
+				{
+					Path:     "CHANGELOG.md",
+					Contents: []byte("# Foo Change Log\n"),
+				},
+			},
+			checks: map[string]gotaggerCheckFunc{
+				"TagRepo": checkTagRepo([]string{"v1.2.0"}),
+				"Version": checkVersion("v1.2.0"),
 			},
 		},
 	}

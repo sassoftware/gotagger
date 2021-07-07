@@ -571,15 +571,15 @@ func filterCommitsByModule(mod module, commits []igit.Commit, modules []module) 
 	grouped := make(map[module][]igit.Commit)
 	for _, commit := range commits {
 		for _, change := range commit.Changes {
-			if mod, ok := isModuleFile(change.SourceName, modules); ok {
-				grouped[mod] = append(grouped[mod], commit)
-				break
+			if m, ok := isModuleFile(change.SourceName, modules); ok {
+				grouped[m] = append(grouped[m], commit)
+				continue
 			}
 			// check if the dest name touched this module
 			if change.DestName != "" {
-				if mod, ok := isModuleFile(change.DestName, modules); ok {
-					grouped[mod] = append(grouped[mod], commit)
-					break
+				if m, ok := isModuleFile(change.DestName, modules); ok {
+					grouped[m] = append(grouped[m], commit)
+					continue
 				}
 			}
 		}
