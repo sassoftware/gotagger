@@ -41,3 +41,6 @@ jobs:
 
       - name: Test
         run: make TIMEOUT=5m TESTFORMAT=testname test
+
+      - name: Validate release commits
+        run: make release
