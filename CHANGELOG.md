@@ -5,6 +5,7 @@
 - [Changelog](#changelog)
   - [[v0.6.2] - 2021-07-09](#v062---2021-07-09)
     - [Fixed](#fixed)
+    - [CI](#ci)
   - [[v0.6.1] - 2021-02-16](#v061---2021-02-16)
     - [Fixed](#fixed-1)
   - [[v0.6.0] - 2020/10/12](#v060---20201012)
@@ -55,6 +56,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix a bug in how `gotagger` calculates the version
   when a commit contains changes to more than one go module.
   [#12](https://github.com/sassoftware/gotagger/issues/12)
+
+
+### CI
+
+- Run `make release` as part of validating PR.
+  This should catch invalid release commits,
+  and other issues that could cause a release to fail.
 
 
 [v0.6.2]: https://github.com/sassoftware/gotagger/compare/v0.6.1...v0.6.2
