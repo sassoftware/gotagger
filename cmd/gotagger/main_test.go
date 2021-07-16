@@ -144,6 +144,12 @@ func TestGoTagger(t *testing.T) {
 			wantErr: "error: could not create memory profile: open ",
 			wantRc:  1,
 		},
+		{
+			title:     "force flag",
+			args:      []string{"-force"},
+			wantOut:   "v1.1.0\n",
+			extraTest: assertTag("v1.1.0"),
+		},
 	}
 
 	for _, tt := range tests {

@@ -61,6 +61,9 @@ type Config struct {
 	// VersionPrefix is a string that will be added to the front of the version. Defaults to 'v'.
 	VersionPrefix string
 
+	// Force controlls whether gotagger will create a tag even if HEAD is not a "release" commit.
+	Force bool
+
 	/* TODO
 	// PreRelease is the string that will be used to generate pre-release versions. The
 	// string may be a Golang text template. Valid arguments are:
@@ -162,7 +165,7 @@ func (g *Gotagger) TagRepo() ([]string, error) {
 	}
 
 	// determine if we should create and push a tag or not
-	if c.Type == commit.TypeRelease && g.Config.CreateTag {
+	if (g.Config.Force || c.Type == commit.TypeRelease) && g.Config.CreateTag {
 		// create tag
 		tags := make([]string, 0, len(versions))
 		for _, ver := range versions {
