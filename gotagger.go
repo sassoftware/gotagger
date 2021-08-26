@@ -45,7 +45,7 @@ type Config struct {
 	ExcludeModules []string
 
 	// IgnoreModules controls whether gotagger will ignore the existence of
-	// go.mod files when determinging how to version a project.
+	// go.mod files when determining how to version a project.
 	IgnoreModules bool
 
 	// RemoteName represents the name of the remote repository. Defaults to origin.
@@ -118,7 +118,7 @@ func (g *Gotagger) ModuleVersions(names ...string) ([]string, error) {
 	return g.versions(modules, nil)
 }
 
-// TagRepo determines the curent version of the repository by parsing the commit
+// TagRepo determines the current version of the repository by parsing the commit
 // history since the previous release and returns that version. Depending
 // on the CreateTag and PushTag configuration options tags may be created and
 // pushed.
@@ -351,12 +351,25 @@ func (g *Gotagger) latest(tags []string) (latest *semver.Version, hash string, e
 	return
 }
 
-func (g *Gotagger) latestModule(m module, tags []string) (*semver.Version, string, error) {
-	var hash string
-	latest := &semver.Version{}
+// latestModule returns the latest version of m and the hash of the commit
+// tagged with that version.
+func (g *Gotagger) latestModule(m module, tags []string) (latest *semver.Version, hash string, err error) {
+	majorVersion := strings.TrimPrefix(versionRegex.FindString(m.name), goModSep)
+	if majorVersion == "" {
+		majorVersion = "v1"
+	}
+	moduleVersion, err := semver.NewVersion(majorVersion + ".0.0")
+	if err != nil {
+		return nil, "", err
+	}
+
+	maximumVersion := moduleVersion.IncMajor()
+	latest = new(semver.Version)
 	for _, tag := range tags {
+		// strip the module prefix from the tag so we can parse it as a semver
 		tagName := strings.TrimPrefix(tag, m.prefix)
-		if tver, err := semver.NewVersion(tagName); err == nil && latest.LessThan(tver) {
+		// we want the highest version that is less than the next major version
+		if tver, err := semver.NewVersion(tagName); err == nil && tver.LessThan(&maximumVersion) && tver.GreaterThan(latest) {
 			hash, err = g.repo.RevParse(tag + "^{commit}")
 			if err != nil {
 				return nil, "", err
@@ -435,16 +448,13 @@ func (g *Gotagger) versionsModules(modules []module, commitModules []module) ([]
 		// version prefix, and the major version of this module.
 		// the major version is the version part of the module name
 		// (foo/v2, foo/v3) normalized to 'X.'
-		var prefixes []string
-		if major := strings.TrimPrefix(versionRegex.FindString(mod.name), goModSep); major == "" {
-			// no major version in module name, so v0.x and v1.x are allowed
-			prefixes = []string{mod.prefix + "v0.*", mod.prefix + "v1.*"}
-		} else {
-			prefixes = []string{mod.prefix + major + ".*"}
+		prefix := g.Config.VersionPrefix
+		if mod.prefix != "" {
+			prefix = mod.prefix + prefix
 		}
 
 		// get tags that match the prefixes
-		tags, err := g.repo.Tags(head, prefixes...)
+		tags, err := g.repo.Tags(head, prefix)
 		if err != nil {
 			return nil, err
 		}
@@ -669,7 +679,7 @@ func validateCommitModules(commitModules, changedModules []module) (err error) {
 	return
 }
 
-// TagRepo determines what the curent version of the repository is by parsing the commit
+// TagRepo determines what the current version of the repository is by parsing the commit
 // history since previous release and returns that version. Depending on the state of
 // the Config passed it, it may also create the tag and push it.
 //
