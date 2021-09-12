@@ -12,7 +12,8 @@
   - [Write Documentation](#write-documentation)
   - [Submit Feedback](#submit-feedback)
 - [Development](#development)
-  - [Prerequisites](#prerequisites)
+  - [VS Code Dev Container](#vs-code-dev-container)
+  - [Local Development](#local-development)
   - [Get Started](#get-started)
   - [Pull Request Guidelines](#pull-request-guidelines)
 - [Changelog Entries](#changelog-entries)
@@ -86,12 +87,28 @@ If you are proposing a feature:
 Ready to contribute? Here's how to set up `gotagger` for local development.
 
 
-### Prerequisites
+### VS Code Dev Container
+
+The `gotagger` project provides a devcontainer setup for VS Code,
+and a set of recommended extensions.
+
+To use the devcontainer with VS Code,
+first install the [Remote - Container] extension.
+
+You can either follow the [Local Development](#local-development) instructions
+and mount your local clone into the devcontainer,
+or clone the repository into a docker volume.
+
+Read the official [documentation](https://code.visualstudio.com/docs/remote/containers)
+for details.
+
+
+### Local Development
 
 First,
-make sure you have the latest version of [go] installed.
+make sure you have the latest version of [go 1.16](https://golang.org/dl/) installed.
 While `gotagger` supports the two most recent releases,
-development should be done with the most recent version.
+development should be done with the lowest supported version.
 
 You will also want [GNU make] >= 3.81 and [pre-commit]
 to ensure that your changes will pass our CI checks.
@@ -212,8 +229,8 @@ Consult [GitHub Help] for more information on using pull requests.
 
 [GNU make]: https://www.gnu.org/software/make/
 [How to Write a Git Commit Message]: https://chris.beams.io/posts/git-commit/
+[Remote - Container]: https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers
 [ci]: https://github.com/sassoftware/gotagger/actions?query=workflow%3ACI
-[go]: https://golang.org/dl/
 [pre-commit]: https://pre-commit.com/
 [rapid]: https://github.com/flyingmutant/rapid
 [semantic newlines]: https://rhodesmill.org/brandon/2012/one-sentence-per-line/
