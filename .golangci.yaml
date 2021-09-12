@@ -1,5 +1,16 @@
 linters:
   enable:
+    - deadcode
+    - errcheck
+    - gocritic
     - goimports
     - gosec
+    - gosimple
+    - govet
+    - ineffassign
     - revive
+    - staticcheck
+    - structcheck
+    - typecheck
+    - unused
+    - varcheck

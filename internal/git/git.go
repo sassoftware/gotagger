@@ -301,8 +301,7 @@ func runGitCommand(args []string, path string) (string, error) {
 
 	out, err := c.Output()
 	if err != nil {
-		switch err := err.(type) {
-		case *exec.ExitError:
+		if err, ok := err.(*exec.ExitError); ok {
 			code := err.ExitCode()
 			switch code {
 			case 127:
