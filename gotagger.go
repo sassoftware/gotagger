@@ -498,7 +498,7 @@ func (g *Gotagger) versionsSimple() ([]string, error) {
 				filtered = append(filtered, tag)
 			}
 		}
-		tags = filtered[:]
+		tags = filtered
 	}
 
 	// find the latest tag and its hash
@@ -679,11 +679,11 @@ func validateCommitModules(commitModules, changedModules []module) (err error) {
 	return
 }
 
-// TagRepo determines what the current version of the repository is by parsing the commit
+// Deprecated: TagRepo determines what the curent version of the repository is by parsing the commit
 // history since previous release and returns that version. Depending on the state of
 // the Config passed it, it may also create the tag and push it.
 //
-// This function is deprecated and will be removed before the v1.0.0 release of gotagger.
+// This function will be removed before the v1.0.0 release of gotagger.
 func TagRepo(cfg *Config, r ggit.Repo) (*semver.Version, error) {
 	// Find the latest semver and the commit hash it references.
 	latest, commitHash, err := getLatest(r, cfg.VersionPrefix)

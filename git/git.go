@@ -45,7 +45,7 @@ func runGitCommand(args []string, path string) ([]byte, error) {
 	}
 	out, err := c.Output()
 	if err != nil {
-		switch err := err.(type) {
+		switch err := err.(type) { // nolint:gocritic // deprecated code
 		case *exec.ExitError:
 			code := err.ExitCode()
 			switch code {
