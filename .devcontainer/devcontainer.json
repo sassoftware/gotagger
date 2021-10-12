@@ -1,18 +1,20 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
-// https://github.com/microsoft/vscode-dev-containers/tree/v0.183.0/containers/go
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.202.1/containers/go
 {
 	"name": "Gotagger",
 	"build": {
 		"dockerfile": "Dockerfile",
 		"args": {
-			// Update the VARIANT arg to pick a version of Go: 1, 1.16, 1.15
+			// Update the VARIANT arg to pick a version of Go: 1, 1.16, 1.17
+			// Append -bullseye or -buster to pin to an OS version.
+			// Use -bullseye variants on local arm64/Apple Silicon.
 			"VARIANT": "1.16",
 			// Options
-			"INSTALL_NODE": "false",
-			"NODE_VERSION": "lts/*"
+			"NODE_VERSION": "none"
 		}
 	},
 	"runArgs": [
+		"--init",
 		"--cap-add=SYS_PTRACE",
 		"--security-opt",
 		"seccomp=unconfined"
@@ -26,13 +28,20 @@
 	},
 	// Add the IDs of extensions you want installed when the container is created.
 	"extensions": [
+		"davidanson.vscode-markdownlint",
 		"github.vscode-pull-request-github",
-		"golang.Go"
+		"golang.Go",
+		"redhat.vscode-yaml"
 	],
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
 	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "pre-commit install -t pre-commit -t commit-msg --install-hooks",
+	"postCreateCommand": "python3 -m pip install pre-commit && pre-commit install -t pre-commit -t commit-msg --install-hooks",
 	// Comment out connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
-	"remoteUser": "vscode"
+	"remoteUser": "vscode",
+	"features": {
+		"git": "latest",
+		"github-cli": "latest",
+		"python": "latest",
+	}
 }
