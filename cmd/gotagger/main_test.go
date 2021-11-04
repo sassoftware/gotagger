@@ -6,6 +6,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/sassoftware/gotagger/internal/testutils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestVersionInfo(t *testing.T) {
@@ -143,6 +145,30 @@ func TestGoTagger(t *testing.T) {
 			args:    []string{"-memprofile=foo/mem.prof"},
 			wantErr: "error: could not create memory profile: open ",
 			wantRc:  1,
+		},
+		{
+			title:   "invalid dirty option",
+			args:    []string{"-dirty=foo"},
+			wantErr: "error: unsupported value for -dirty: foo",
+			wantRc:  1,
+		},
+		{
+			title:   "dirty minor",
+			args:    []string{"-dirty=minor"},
+			wantOut: "v1.4.0\n",
+			extraSetup: func(t *testing.T, repo *git.Repository, path string) {
+				testutils.CreateTag(t, repo, path, "v1.3.0")
+				require.NoError(t, ioutil.WriteFile(filepath.Join(path, "foo"), []byte("foo\n"), 0600))
+			},
+		},
+		{
+			title:   "dirty patch",
+			args:    []string{"-dirty=patch"},
+			wantOut: "v1.3.1\n",
+			extraSetup: func(t *testing.T, repo *git.Repository, path string) {
+				testutils.CreateTag(t, repo, path, "v1.3.0")
+				require.NoError(t, ioutil.WriteFile(filepath.Join(path, "foo"), []byte("foo\n"), 0600))
+			},
 		},
 	}
 

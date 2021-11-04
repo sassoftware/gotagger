@@ -30,6 +30,9 @@ const (
  go compiler : %s
  platform    : %s/%s
 `
+
+	incrementMinor = "minor"
+	incrementPatch = "patch"
 )
 
 var (
@@ -51,12 +54,13 @@ type GoTagger struct {
 	err *log.Logger
 
 	// command-line options
-	modules       bool
-	pushTag       bool
-	remoteName    string
-	showVersion   bool
-	tagRelease    bool
-	versionPrefix string
+	modules        bool
+	pushTag        bool
+	remoteName     string
+	showVersion    bool
+	tagRelease     bool
+	versionPrefix  string
+	dirtyIncrement string
 }
 
 // Runs GoTagger.
@@ -74,6 +78,7 @@ func (g *GoTagger) Run() int {
 	flags.BoolVar(&g.showVersion, "version", false, "show version information")
 	flags.BoolVar(&g.tagRelease, "release", g.boolEnv("release", false), "tag HEAD with the current version if it is a release commit")
 	flags.StringVar(&g.versionPrefix, "prefix", g.stringEnv("prefix", "v"), "set a prefix for versions")
+	flags.StringVar(&g.dirtyIncrement, "dirty", g.stringEnv("dirty", ""), "how to increment the version for a dirty checkout [minor, patch]")
 
 	// profiling options
 	cpuprofile := flags.String("cpuprofile", "", "write cpu profile to file")
@@ -81,6 +86,12 @@ func (g *GoTagger) Run() int {
 
 	g.setUsage(flags)
 	if err := flags.Parse(g.Args); err != nil {
+		return genericErrorExitCode
+	}
+
+	// validate dirty value: empty string, patch or minor
+	if !(g.dirtyIncrement == "" || g.dirtyIncrement == incrementMinor || g.dirtyIncrement == incrementPatch) {
+		g.err.Println("error: unsupported value for -dirty:", g.dirtyIncrement)
 		return genericErrorExitCode
 	}
 
@@ -135,6 +146,7 @@ func (g *GoTagger) Run() int {
 	r.Config.PushTag = g.pushTag
 	r.Config.RemoteName = g.remoteName
 	r.Config.VersionPrefix = g.versionPrefix
+	r.Config.DirtyWorktreeIncrement = g.dirtyIncrement
 
 	versions, err := r.TagRepo()
 	if err != nil {

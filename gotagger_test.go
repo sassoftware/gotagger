@@ -9,9 +9,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	sgit "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/sassoftware/gotagger/internal/commit"
 	"github.com/sassoftware/gotagger/internal/git"
 	"github.com/sassoftware/gotagger/internal/testutils"
 	"github.com/stretchr/testify/assert"
@@ -105,6 +107,32 @@ func TestGotagger_ModuleVersion(t *testing.T) {
 
 	if v, err := g.ModuleVersions("foo/sub/module"); assert.NoError(t, err) {
 		assert.Equal(t, []string{"sub/module/v0.1.1"}, v)
+	}
+}
+
+func TestGotagger_ModuleVersions_PreMajor(t *testing.T) {
+	g, repo, path, teardown := newGotagger(t)
+	defer teardown()
+
+	// set PreMajor
+	g.Config.PreMajor = true
+
+	simpleGoRepo(t, repo, path)
+
+	// make a breaking change to foo
+	testutils.CommitFile(t, repo, path, "foo.go", "feat!: breaking change", []byte(`contents`))
+
+	// major version should rev
+	if v, err := g.ModuleVersions("foo"); assert.NoError(t, err) {
+		assert.Equal(t, []string{"v2.0.0"}, v)
+	}
+
+	// make a breaking change to sub/module
+	testutils.CommitFile(t, repo, path, filepath.Join("sub", "module", "file"), "feat!: breaking change", []byte(`contents`))
+
+	// version should not rev major
+	if v, err := g.ModuleVersions("foo/sub/module"); assert.NoError(t, err) {
+		assert.Equal(t, []string{"sub/module/v0.2.0"}, v)
 	}
 }
 
@@ -1080,32 +1108,6 @@ func TestGotagger_Version_IgnoreModules(t *testing.T) {
 	}
 }
 
-func TestGotagger_Version_PreMajor(t *testing.T) {
-	g, repo, path, teardown := newGotagger(t)
-	defer teardown()
-
-	// set PreMajor
-	g.Config.PreMajor = true
-
-	simpleGoRepo(t, repo, path)
-
-	// make a breaking change to foo
-	testutils.CommitFile(t, repo, path, "foo.go", "feat!: breaking change", []byte(`contents`))
-
-	// major version should rev
-	if v, err := g.ModuleVersions("foo"); assert.NoError(t, err) {
-		assert.Equal(t, []string{"v2.0.0"}, v)
-	}
-
-	// make a breaking change to sub/module
-	testutils.CommitFile(t, repo, path, filepath.Join("sub", "module", "file"), "feat!: breaking change", []byte(`contents`))
-
-	// version should not rev major
-	if v, err := g.ModuleVersions("foo/sub/module"); assert.NoError(t, err) {
-		assert.Equal(t, []string{"sub/module/v0.2.0"}, v)
-	}
-}
-
 func TestGotagger_Version_breaking(t *testing.T) {
 	g, repo, path, teardown := newGotagger(t)
 	defer teardown()
@@ -1250,6 +1252,105 @@ func TestGotagger_findAllModules(t *testing.T) {
 			g.Config.ExcludeModules = tt.exclude
 			if modules, err := g.findAllModules(tt.include); assert.NoError(t, err) {
 				assert.Equal(t, tt.want, modules)
+			}
+		})
+	}
+}
+
+func TestGotagger_incrementVersion(t *testing.T) {
+	tests := []struct {
+		title          string
+		repoFunc       func(testutils.T, *sgit.Repository, string)
+		dirtyIncrement string
+		preMajor       bool
+		commits        []git.Commit
+		want           string
+	}{
+		{
+			title: "breaking feat",
+			commits: []git.Commit{
+				{Commit: commit.Commit{Type: commit.TypeFeature, Breaking: true}},
+			},
+			want: "1.0.0",
+		},
+		{
+			title: "breaking fix",
+			commits: []git.Commit{
+				{Commit: commit.Commit{Type: commit.TypeBugFix, Breaking: true}},
+			},
+			want: "1.0.0",
+		},
+		{
+			title: "breaking unknown",
+			commits: []git.Commit{
+				{Commit: commit.Commit{Type: commit.Type("unknown"), Breaking: true}},
+			},
+			want: "1.0.0",
+		},
+		{
+			title:    "breaking feat pre-major",
+			preMajor: true,
+			commits: []git.Commit{
+				{Commit: commit.Commit{Type: commit.TypeFeature, Breaking: true}},
+			},
+			want: "0.2.0",
+		},
+		{
+			title:    "breaking fix pre-major",
+			preMajor: true,
+			commits: []git.Commit{
+				{Commit: commit.Commit{Type: commit.TypeBugFix, Breaking: true}},
+			},
+			want: "0.1.1",
+		},
+		{
+			title:    "breaking unknown pre-major",
+			preMajor: true,
+			commits: []git.Commit{
+				{Commit: commit.Commit{Type: commit.Type("unknown"), Breaking: true}},
+			},
+			want: "0.1.1",
+		},
+		{
+			title:          "dirty minor",
+			dirtyIncrement: "minor",
+			want:           "0.2.0",
+		},
+		{
+			title:          "dirty patch",
+			dirtyIncrement: "patch",
+			want:           "0.1.1",
+		},
+		{
+			title:          "dirty unknown",
+			dirtyIncrement: "unknown",
+			want:           "0.1.0",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+
+		t.Run(tt.title, func(t *testing.T) {
+			t.Parallel()
+
+			g, repo, path, teardwon := newGotagger(t)
+			defer teardwon()
+
+			if tt.repoFunc != nil {
+				tt.repoFunc(t, repo, path)
+			} else {
+				testutils.SimpleGitRepo(t, repo, path)
+			}
+
+			g.Config.DirtyWorktreeIncrement = tt.dirtyIncrement
+			g.Config.PreMajor = tt.preMajor
+
+			// add untracked file for dirty tests
+			require.NoError(t, ioutil.WriteFile(filepath.Join(path, "untracked"), []byte("untracked\n"), 0600))
+
+			if got, err := g.incrementVersion(semver.MustParse("0.1.0"), tt.commits); assert.NoError(t, err) {
+				assert.Equal(t, tt.want, got)
 			}
 		})
 	}

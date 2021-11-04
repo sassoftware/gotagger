@@ -61,6 +61,10 @@ type Config struct {
 	// VersionPrefix is a string that will be added to the front of the version. Defaults to 'v'.
 	VersionPrefix string
 
+	// DirtyWorktreeIncrement is a string that sets how to increment the version
+	// if there are no new commits, but the worktree is "dirty".
+	DirtyWorktreeIncrement string
+
 	/* TODO
 	// PreRelease is the string that will be used to generate pre-release versions. The
 	// string may be a Golang text template. Valid arguments are:
@@ -316,24 +320,34 @@ func (g *Gotagger) findAllModules(include []string) (modules []module, err error
 	return
 }
 
-func (g *Gotagger) incrementVersion(v *semver.Version, commits []igit.Commit) (version string) {
+func (g *Gotagger) incrementVersion(v *semver.Version, commits []igit.Commit) (string, error) {
 	// If this is the latest tagged commit, then return
 	if len(commits) > 0 {
 		change, breaking := g.parseCommits(commits)
 		switch {
 		// ignore breaking if this is a 0.x.y version and PreMajor is set
 		case breaking && !(g.Config.PreMajor && v.Major() == 0):
-			version = v.IncMajor().String()
+			return v.IncMajor().String(), nil
 		case change == commit.TypeFeature:
-			version = v.IncMinor().String()
+			return v.IncMinor().String(), nil
 		default:
-			version = v.IncPatch().String()
+			return v.IncPatch().String(), nil
 		}
 	} else {
-		version = v.String()
-	}
+		isDirty, err := g.repo.IsDirty()
+		if err != nil {
+			return "", err
+		}
 
-	return
+		switch {
+		case isDirty && g.Config.DirtyWorktreeIncrement == "minor":
+			return v.IncMinor().String(), nil
+		case isDirty && g.Config.DirtyWorktreeIncrement == "patch":
+			return v.IncPatch().String(), nil
+		default:
+			return v.String(), nil
+		}
+	}
 }
 
 func (g *Gotagger) latest(tags []string) (latest *semver.Version, hash string, err error) {
@@ -474,7 +488,10 @@ func (g *Gotagger) versionsModules(modules []module, commitModules []module) ([]
 		// filter out commits that do not touch this module
 		commits = filterCommitsByModule(mod, commits, modules)
 
-		version := g.incrementVersion(latest, commits)
+		version, err := g.incrementVersion(latest, commits)
+		if err != nil {
+			return nil, fmt.Errorf("could not increment version: %w", err)
+		}
 		versions[i] = mod.prefix + g.Config.VersionPrefix + version
 	}
 
@@ -514,7 +531,11 @@ func (g *Gotagger) versionsSimple() ([]string, error) {
 	}
 
 	// increment the version
-	version := g.incrementVersion(latest, commits)
+	version, err := g.incrementVersion(latest, commits)
+	if err != nil {
+		return nil, fmt.Errorf("could not increment version: %w", err)
+	}
+
 	return []string{g.Config.VersionPrefix + version}, nil
 }
 

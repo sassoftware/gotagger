@@ -95,6 +95,84 @@ func TestHead(t *testing.T) {
 	}
 }
 
+func TestIsDirty(t *testing.T) {
+	t.Parallel()
+
+	t.Run("clean chekcout", func(t *testing.T) {
+		repo, path, teardown := testutils.NewGitRepo(t)
+		defer teardown()
+
+		testutils.SimpleGitRepo(t, repo, path)
+
+		r, err := New(path)
+		require.NoError(t, err)
+
+		if got, err := r.IsDirty(); assert.NoError(t, err) {
+			assert.False(t, got)
+		}
+	})
+
+	t.Run("untracked file", func(t *testing.T) {
+		repo, path, teardown := testutils.NewGitRepo(t)
+		defer teardown()
+
+		testutils.SimpleGitRepo(t, repo, path)
+
+		r, err := New(path)
+		require.NoError(t, err)
+		require.NoError(t, ioutil.WriteFile(filepath.Join(path, "untracked"), []byte("foo\n"), 0600))
+
+		if got, err := r.IsDirty(); assert.NoError(t, err) {
+			assert.True(t, got)
+		}
+
+		// stage it
+		wt, err := repo.Worktree()
+		require.NoError(t, err)
+		_, err = wt.Add("foo")
+		require.NoError(t, err)
+
+		if got, err := r.IsDirty(); assert.NoError(t, err) {
+			assert.True(t, got)
+		}
+	})
+
+	t.Run("changed file", func(t *testing.T) {
+		repo, path, teardown := testutils.NewGitRepo(t)
+		defer teardown()
+
+		testutils.SimpleGitRepo(t, repo, path)
+
+		r, err := New(path)
+		require.NoError(t, err)
+		require.NoError(t, ioutil.WriteFile(filepath.Join(path, "foo"), []byte("some new content\n"), 0600))
+
+		if got, err := r.IsDirty(); assert.NoError(t, err) {
+			assert.True(t, got)
+		}
+	})
+
+	t.Run("staged file", func(t *testing.T) {
+		repo, path, teardown := testutils.NewGitRepo(t)
+		defer teardown()
+
+		testutils.SimpleGitRepo(t, repo, path)
+
+		r, err := New(path)
+		require.NoError(t, err)
+		require.NoError(t, ioutil.WriteFile(filepath.Join(path, "foo"), []byte("some new content\n"), 0600))
+
+		wt, err := repo.Worktree()
+		require.NoError(t, err)
+		_, err = wt.Add("foo")
+		require.NoError(t, err)
+
+		if got, err := r.IsDirty(); assert.NoError(t, err) {
+			assert.True(t, got)
+		}
+	})
+}
+
 func TestPushTags(t *testing.T) {
 	wantArgs := []string{"--git-dir", ".git", "push", "origin", "refs/tags/v1.0.0:refs/tags/v1.0.0"}
 	wantPath := "path"
