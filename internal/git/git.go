@@ -116,6 +116,12 @@ func (r *Repository) Head() (Commit, error) {
 	return commits[0], nil
 }
 
+// IsDirty returns a boolean indicating whether there are uncommited changes.
+func (r *Repository) IsDirty() (bool, error) {
+	out, err := r.run([]string{"status", "--porcelain"})
+	return out != "", err
+}
+
 // PushTag pushes tag to remote.
 func (r *Repository) PushTag(tag string, remote string) error {
 	return r.PushTags([]string{tag}, remote)
