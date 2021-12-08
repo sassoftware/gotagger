@@ -7,6 +7,6 @@ require (
 	github.com/axw/gocov v1.0.0
 	github.com/golangci/golangci-lint v1.42.1
 	github.com/goreleaser/goreleaser v0.178.0
-	github.com/wfscheper/stentor v0.2.3
+	github.com/wfscheper/stentor v0.3.0
 	gotest.tools/gotestsum v1.7.0
 )
