@@ -9,6 +9,7 @@
   - [Installation](#installation)
 - [Getting started](#getting-started)
   - [Running](#running)
+    - [Customizing Version Increments](#customizing-version-increments)
   - [Go Module Support](#go-module-support)
 - [Using gotagger as a library](#using-gotagger-as-a-library)
 - [Contributing](#contributing)
@@ -103,6 +104,40 @@ by using the `-push` flag.
 gotagger -release -push
 ```
 
+#### Customizing Version Increments
+
+In some cases,
+you may wish to change which semantic version
+field should increment based on
+which commit type is provided.
+You can do this via a [config file](gotagger.json).
+The config file contains a mapping of commit type to semver increment
+and a default increment to use if it
+encounters an unknown commit type.
+For example:
+
+```json
+{
+  "incrementMappings": {
+    "feat": "minor",
+    "fix": "patch"
+  },
+  "defaultIncrement": "none"
+}
+```
+
+Running:
+
+```bash
+gotagger -config ./gotagger.json
+```
+
+If a `gotagger.json` file exists in the working directory,
+Gotagger will use it.
+If no configuration is provided,
+Gotagger defaults to the current functionality,
+which is equivalent to what is defined in
+[gotagger.json](gotagger.json).
 
 ### Go Module Support
 
@@ -208,7 +243,6 @@ if err != nil {
     return err
 }
 ```
-
 
 ## Contributing
 

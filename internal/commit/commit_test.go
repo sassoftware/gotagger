@@ -76,7 +76,7 @@ func TestParse(t *testing.T) {
 		var c Commit
 		if ctype != "" && subject != "" {
 			c = Commit{
-				Type:     Type(ctype),
+				Type:     ctype,
 				Scope:    scope,
 				Subject:  strings.TrimSpace(subject),
 				Body:     strings.TrimSpace(body),
@@ -121,7 +121,7 @@ func TestParse_merge(t *testing.T) {
 		header += ": " + subject
 
 		want := Commit{
-			Type:     Type(ctype),
+			Type:     ctype,
 			Scope:    scope,
 			Subject:  strings.TrimSpace(subject),
 			Body:     strings.TrimSpace(body),
@@ -157,7 +157,7 @@ func TestParse_revert(t *testing.T) {
 		var c Commit
 		if hash != "" {
 			c = Commit{
-				Type:     Type(ctype),
+				Type:     ctype,
 				Scope:    scope,
 				Subject:  strings.TrimSpace(subject),
 				Body:     strings.TrimSpace("This reverts commit " + hash + "."),

@@ -15,17 +15,9 @@ var (
 	footerRe = regexp.MustCompile(`^(?P<title>[-\w ]+): (?P<text>.*)`)
 )
 
-type Type string
-
-const (
-	TypeFeature Type = "feat"
-	TypeBugFix  Type = "fix"
-	TypeRelease Type = "release"
-)
-
 // Commit represents the parsed data from a conventional commit message.
 type Commit struct {
-	Type     Type
+	Type     string
 	Scope    string
 	Subject  string
 	Body     string
@@ -105,7 +97,7 @@ func Parse(s string) (c Commit) {
 	body, footers, breaking := parseMessageBody(lines)
 	breaking = breaking || m[3] == "!"
 	c = Commit{
-		Type:     Type(typ),
+		Type:     typ,
 		Scope:    scope,
 		Subject:  subject,
 		Breaking: breaking,
