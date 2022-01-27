@@ -1,0 +1,6 @@
+{
+  "incrementMappings": {
+    "feat": "minor"
+  },
+  "defaultIncrement": "patch"
+}

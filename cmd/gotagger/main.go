@@ -61,6 +61,7 @@ type GoTagger struct {
 	tagRelease     bool
 	versionPrefix  string
 	dirtyIncrement string
+	configFile     string
 }
 
 // Runs GoTagger.
@@ -79,6 +80,16 @@ func (g *GoTagger) Run() int {
 	flags.BoolVar(&g.tagRelease, "release", g.boolEnv("release", false), "tag HEAD with the current version if it is a release commit")
 	flags.StringVar(&g.versionPrefix, "prefix", g.stringEnv("prefix", "v"), "set a prefix for versions")
 	flags.StringVar(&g.dirtyIncrement, "dirty", g.stringEnv("dirty", ""), "how to increment the version for a dirty checkout [minor, patch]")
+	flags.StringVar(&g.configFile, "config", g.stringEnv("config", ""), "path to the gotagger configuration file.")
+
+	if g.configFile == "" {
+		// If there's no config file provided, check for one locally.
+		defaultConfig := filepath.Join(g.WorkingDir, "gotagger.json")
+		_, err := os.Stat(defaultConfig)
+		if err == nil {
+			g.configFile = defaultConfig
+		}
+	}
 
 	// profiling options
 	cpuprofile := flags.String("cpuprofile", "", "write cpu profile to file")
@@ -141,6 +152,21 @@ func (g *GoTagger) Run() int {
 		g.err.Println("error: ", err)
 		return genericErrorExitCode
 	}
+
+	if g.configFile != "" {
+		data, err := os.ReadFile(g.configFile)
+		if err != nil {
+			g.err.Println("error: ", err)
+			return genericErrorExitCode
+		}
+
+		err = r.Config.ParseJSON(data)
+		if err != nil {
+			g.err.Println("error: ", err)
+			return genericErrorExitCode
+		}
+	}
+
 	r.Config.CreateTag = g.tagRelease || g.pushTag
 	r.Config.IgnoreModules = !g.modules
 	r.Config.PushTag = g.pushTag

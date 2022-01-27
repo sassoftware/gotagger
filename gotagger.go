@@ -4,6 +4,7 @@
 package gotagger
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -16,8 +17,8 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	ggit "github.com/sassoftware/gotagger/git"
-	"github.com/sassoftware/gotagger/internal/commit"
 	igit "github.com/sassoftware/gotagger/internal/git"
+	"github.com/sassoftware/gotagger/mapper"
 	"github.com/sassoftware/gotagger/marker"
 	"golang.org/x/mod/modfile"
 )
@@ -65,6 +66,15 @@ type Config struct {
 	// if there are no new commits, but the worktree is "dirty".
 	DirtyWorktreeIncrement string
 
+	// Mappings mapping of commit type to semantic version increment. Used to populate a mapper.Table.
+	Mappings map[string]string `json:"incrementMappings"`
+
+	// DefaultIncrement if the commit type is not available in Mappings, increment by this amount.
+	DefaultIncrement string `json:"defaultIncrement"`
+
+	// CommitTypeTable used for looking up version increments based on the commit type.
+	CommitTypeTable mapper.Table
+
 	/* TODO
 	// PreRelease is the string that will be used to generate pre-release versions. The
 	// string may be a Golang text template. Valid arguments are:
@@ -73,6 +83,45 @@ type Config struct {
 	//		The number of commits since the previous release.
 	PreRelease string
 	*/
+}
+
+// ParseJSON unmarshals a byte slic containing mappings of commit type to semver increment. Mappings determine
+// how much to increment the semver based on the commit type. The 'release' commit type has special meaning to gotagger
+// and cannot be overridden in the config file. Unknown commit types will fall back to the config default.
+// Invalid increments will throw an error. Duplicate type definitions will take the last entry.
+func (c *Config) ParseJSON(data []byte) error {
+	err := json.Unmarshal(data, &c)
+	if err != nil {
+		return err
+	}
+
+	if _, ok := c.Mappings["release"]; ok {
+		return fmt.Errorf("release mapping is not allowed")
+	}
+	c.Mappings["release"] = "patch"
+
+	table := mapper.Mapper{}
+	for typ, inc := range c.Mappings {
+		conversion, err := mapper.Convert(inc)
+		if err != nil {
+			return err
+		}
+
+		if conversion == mapper.IncrementMajor {
+			return fmt.Errorf("major version increments cannot be mapped to commit types. use the commit spec directives for this")
+		}
+
+		table[typ] = conversion
+		continue
+	}
+
+	def, err := mapper.Convert(c.DefaultIncrement)
+	if err != nil {
+		return err
+	}
+	c.CommitTypeTable = mapper.NewTable(table, def)
+
+	return nil
 }
 
 // NewDefaultConfig returns a Config with default options set.
@@ -85,8 +134,9 @@ type Config struct {
 //		v
 func NewDefaultConfig() Config {
 	return Config{
-		RemoteName:    "origin",
-		VersionPrefix: "v",
+		RemoteName:      "origin",
+		VersionPrefix:   "v",
+		CommitTypeTable: mapper.NewTable(nil, mapper.IncrementPatch),
 	}
 }
 
@@ -166,7 +216,7 @@ func (g *Gotagger) TagRepo() ([]string, error) {
 	}
 
 	// determine if we should create and push a tag or not
-	if c.Type == commit.TypeRelease && g.Config.CreateTag {
+	if c.Type == mapper.TypeRelease && g.Config.CreateTag {
 		// create tag
 		tags := make([]string, 0, len(versions))
 		for _, ver := range versions {
@@ -323,15 +373,16 @@ func (g *Gotagger) findAllModules(include []string) (modules []module, err error
 func (g *Gotagger) incrementVersion(v *semver.Version, commits []igit.Commit) (string, error) {
 	// If this is the latest tagged commit, then return
 	if len(commits) > 0 {
-		change, breaking := g.parseCommits(commits)
-		switch {
-		// ignore breaking if this is a 0.x.y version and PreMajor is set
-		case breaking && !(g.Config.PreMajor && v.Major() == 0):
+		change := g.parseCommits(commits, v)
+		switch change {
+		case mapper.IncrementMajor:
 			return v.IncMajor().String(), nil
-		case change == commit.TypeFeature:
+		case mapper.IncrementMinor:
 			return v.IncMinor().String(), nil
-		default:
+		case mapper.IncrementPatch:
 			return v.IncPatch().String(), nil
+		default:
+			return v.String(), nil
 		}
 	} else {
 		isDirty, err := g.repo.IsDirty()
@@ -395,22 +446,31 @@ func (g *Gotagger) latestModule(m module, tags []string) (latest *semver.Version
 	return latest, hash, nil
 }
 
-func (g *Gotagger) parseCommits(cs []igit.Commit) (ctype commit.Type, breaking bool) {
+func (g *Gotagger) parseCommits(cs []igit.Commit, v *semver.Version) (vinc mapper.Increment) {
 	for _, c := range cs {
-		switch c.Type {
-		case commit.TypeFeature:
-			ctype = c.Type
-		case commit.TypeBugFix:
-			if ctype != commit.TypeFeature {
-				ctype = c.Type
-			}
+		inc := g.Config.CommitTypeTable.Get(c.Type)
+		if c.Breaking && !(g.Config.PreMajor && v.Major() == 0) {
+			// ignore breaking if this is a 0.x.y version and PreMajor is set
+			return mapper.IncrementMajor
 		}
-		if c.Breaking {
-			breaking = true
+
+		switch inc {
+		case mapper.IncrementMinor:
+			if vinc < mapper.IncrementMajor {
+				vinc = inc
+			}
+		case mapper.IncrementPatch:
+			if vinc < mapper.IncrementMinor {
+				vinc = inc
+			}
+		case mapper.IncrementNone:
+			if vinc < mapper.IncrementPatch {
+				vinc = inc
+			}
 		}
 	}
 
-	return ctype, breaking
+	return vinc
 }
 
 func (g *Gotagger) validateCommit(c igit.Commit, modules []module, commitModules []module) error {
@@ -419,7 +479,7 @@ func (g *Gotagger) validateCommit(c igit.Commit, modules []module, commitModules
 		return nil
 	}
 
-	if c.Type == commit.TypeRelease {
+	if c.Type == mapper.TypeRelease {
 		// generate a list of modules changed by this commit
 		var changedModules []module
 		for _, change := range c.Changes {
