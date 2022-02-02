@@ -23,7 +23,7 @@ jobs:
         os: [ubuntu-latest, macOS-latest, windows-latest]
     steps:
       - name: Set up Go ${{ matrix.go_version }}
-        uses: actions/setup-go@v1
+        uses: actions/setup-go@v2.1.5
         with:
           go-version: ${{ matrix.go_version }}
         id: go
