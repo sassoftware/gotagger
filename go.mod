@@ -7,7 +7,7 @@ require (
 	github.com/go-git/go-git/v5 v5.1.0
 	github.com/google/go-cmp v0.4.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/stretchr/testify v1.6.1
+	github.com/stretchr/testify v1.7.0
 	golang.org/x/crypto v0.0.0-20200422194213-44a606286825 // indirect
 	golang.org/x/mod v0.5.1
 	golang.org/x/net v0.0.0-20200505041828-1ed23360d12c // indirect
