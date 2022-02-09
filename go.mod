@@ -8,5 +8,5 @@ require (
 	github.com/google/go-cmp v0.4.0 // indirect
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/mod v0.5.1
-	pgregory.net/rapid v0.4.1
+	pgregory.net/rapid v0.4.7
 )
