@@ -38,3 +38,6 @@ repos:
     rev: v1.44.0
     hooks:
       - id: golangci-lint
+ci:
+  autofix_prs: false
+  autoupdate_commit_msg: 'chore: auto-update of pre-commit hooks'

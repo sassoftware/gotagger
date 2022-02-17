@@ -194,7 +194,7 @@ Changelog entries should follow these rules:
 - Use [semantic newlines],
   just like other documentation.
 - Wrap the names of things in backticks: `like this`.
-- Wrap arguments with asterisks: _these_ or _attributes_.
+- Wrap arguments with asterisks: *these* or *attributes*.
 - Names of functions or other callables should be followed by parentheses:
   `my_cool_function()`.
 - Use the active voice and either present tense or simple past tense.
