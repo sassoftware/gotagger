@@ -1,0 +1,18 @@
+---
+name: actionlint
+
+on:
+  push:
+    branches: [main, release-*]
+  pull_request:
+
+jobs:
+  lint:
+    name: Run actionlint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579
+
+      - name: Lint with actionlint
+        uses: reviewdog/action-actionlint@b90911e83b48ae099d609be666e2ff7a3dde25d8

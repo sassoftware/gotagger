@@ -1,0 +1,34 @@
+---
+name: Tag
+
+on:
+  push:
+    branches: [main, release-*]
+
+jobs:
+  tag:
+    name: Tag release commit
+    if: "startsWith(github.event.commits[0].message, 'release: ')"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go  1.16
+        uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492
+        with:
+          go-version: 1.16
+        id: go
+
+      - name: Determine cache locations
+        id: go-cache-paths
+        run: |
+          echo "::set-output name=go-build::$(go env GOCACHE)"
+          echo "::set-output name=go-mod::$(go env GOMODCACHE)"
+
+      - name: Check out code
+        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579
+        with:
+          fetch-depth: 0
+
+      - name: Tag commit
+        run: |
+          make build/linux/gotagger
+          build/linux/gotagger -push

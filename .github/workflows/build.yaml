@@ -3,6 +3,7 @@ name: Build
 
 on:
   push:
+    branches: [main, release-*]
   pull_request:
 
 jobs:
@@ -11,19 +12,37 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        go_version: [1.17, 1.16]
+        go_version: [1.16, 1.17]
         os: [ubuntu-latest, macOS-latest, windows-latest]
     steps:
       - name: Set up Go ${{ matrix.go_version }}
-        uses: actions/setup-go@v2.2.0
+        uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492
         with:
           go-version: ${{ matrix.go_version }}
         id: go
 
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
+      - name: Determine cache locations
+        id: go-cache-paths
+        run: |
+          echo "::set-output name=go-build::$(go env GOCACHE)"
+          echo "::set-output name=go-mod::$(go env GOMODCACHE)"
+
+      - name: Check out code
+        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579
         with:
           fetch-depth: 0
+
+      - name: Go Build Cache
+        uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed
+        with:
+          path: ${{ steps.go-cache-paths.outputs.go-build }}
+          key: ${{ matrix.os }}-go-${{ matrix.go_version }}-build-${{ hashFiles('**/go.sum') }}
+
+      - name: Go Module Cache
+        uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed
+        with:
+          path: ${{ steps.go-cache-paths.outputs.go-mod }}
+          key: ${{ matrix.os }}-go-${{ matrix.go_version }}-mod-${{ hashFiles('**/go.sum') }}
 
       - name: Get dependencies
         run: go mod download
@@ -32,7 +51,4 @@ jobs:
         run: make build
 
       - name: Test
-        run: make TIMEOUT=5m TESTFORMAT=testname test
-
-      - name: Validate release commits
-        run: make release
+        run: make test

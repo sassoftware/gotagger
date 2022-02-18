@@ -34,10 +34,17 @@ repos:
     rev: v1.26.3
     hooks:
       - id: yamllint
+        exclude: ^(.github/workflows/)
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.6.8
+    hooks:
+      - id: actionlint
   - repo: https://github.com/golangci/golangci-lint
     rev: v1.44.0
     hooks:
       - id: golangci-lint
+        args: [--allow-parallel-runners]
 ci:
   autofix_prs: false
   autoupdate_commit_msg: 'chore: auto-update of pre-commit hooks'
+  skip: [actionlint, golangci-lint]
