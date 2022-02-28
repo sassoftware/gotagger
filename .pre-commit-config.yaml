@@ -36,11 +36,11 @@ repos:
       - id: yamllint
         exclude: ^(.github/workflows/)
   - repo: https://github.com/rhysd/actionlint
-    rev: v1.6.8
+    rev: v1.6.9
     hooks:
       - id: actionlint
   - repo: https://github.com/golangci/golangci-lint
-    rev: v1.44.0
+    rev: v1.44.2
     hooks:
       - id: golangci-lint
         args: [--allow-parallel-runners]
