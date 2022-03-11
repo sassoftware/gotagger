@@ -3,8 +3,10 @@
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 - [Changelog](#changelog)
-  - [[v0.7.0] - 2021-12-08](#v070---2021-12-08)
+  - [[v0.8.0] - 2022-03-11](#v080---2022-03-11)
     - [Added](#added)
+  - [[v0.7.0] - 2021-12-08](#v070---2021-12-08)
+    - [Added](#added-1)
   - [[v0.6.3] - 2021-08-26](#v063---2021-08-26)
     - [Fixed](#fixed)
   - [[v0.6.2] - 2021-07-09](#v062---2021-07-09)
@@ -24,21 +26,21 @@
     - [Fix](#fix-2)
     - [Refactor](#refactor-1)
   - [[v0.4.0] - 2019/07/10](#v040---20190710)
-    - [Added](#added-1)
+    - [Added](#added-2)
     - [Fixed](#fixed-3)
   - [[v0.3.1] - 2019/12/16](#v031---20191216)
     - [Fixed](#fixed-4)
   - [[v0.3.0] - 2019/11/18](#v030---20191118)
-    - [Added](#added-2)
-  - [[v0.2.0] - 2019/11/15](#v020---20191115)
     - [Added](#added-3)
+  - [[v0.2.0] - 2019/11/15](#v020---20191115)
+    - [Added](#added-4)
     - [Changed](#changed)
   - [[v0.1.2] - 2019/10/14](#v012---20191014)
     - [Fixed](#fixed-5)
   - [[v0.1.1] - 2019/10/12](#v011---20191012)
     - [Fixed](#fixed-6)
   - [[v0.1.0] - 2019/10/11](#v010---20191011)
-    - [Added](#added-4)
+    - [Added](#added-5)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 <!-- markdownlint-enable -->
@@ -53,6 +55,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- stentor output starts -->
+## [v0.8.0] - 2022-03-11
+
+### Added
+
+- Add a feature allowing users
+  to configure semantic version increments.
+  This is done by way of a config file,
+  which is optionally passed to Gotagger.
+  [#30](https://github.com/sassoftware/gotagger/issues/30)
+
+
+[v0.8.0]: https://github.com/sassoftware/gotagger/compare/v0.7.0...v0.8.0
+
+
+----
+
+
 ## [v0.7.0] - 2021-12-08
 
 ### Added
