@@ -1,2 +1,30 @@
 [stentor]
 repository = "https://github.com/sassoftware/gotagger"
+
+[[stentor.sections]]
+name = "Security"
+short_name = "security"
+
+[[stentor.sections]]
+name = "Deprecated"
+short_name = "deprecated"
+
+[[stentor.sections]]
+name = "Removed"
+short_name = "removed"
+
+[[stentor.sections]]
+name = "Added"
+short_name = "feature"
+
+[[stentor.sections]]
+name = "Fixed"
+short_name = "fix"
+
+[[stentor.sections]]
+name = "Build"
+short_name = "build"
+
+[[stentor.sections]]
+name = "Chores"
+short_name = "chore"

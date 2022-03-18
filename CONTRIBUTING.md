@@ -106,7 +106,7 @@ for details.
 ### Local Development
 
 First,
-make sure you have the latest version of [go 1.16](https://golang.org/dl/) installed.
+make sure you have a supported version of [go](https://golang.org/dl/) installed.
 While `gotagger` supports the two most recent releases,
 development should be done with the lowest supported version.
 

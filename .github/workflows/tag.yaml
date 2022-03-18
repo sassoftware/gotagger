@@ -11,10 +11,10 @@ jobs:
     if: "startsWith(github.event.commits[0].message, 'release: ')"
     runs-on: ubuntu-latest
     steps:
-      - name: Set up Go  1.16
+      - name: Set up Go
         uses: actions/setup-go@f6164bd8c8acb4a71fb2791a8b6c4024ff038dab
         with:
-          go-version: 1.16
+          go-version: 1.17
         id: go
 
       - name: Determine cache locations
