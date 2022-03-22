@@ -4,6 +4,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -16,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/sassoftware/gotagger"
+	"github.com/sassoftware/gotagger/mapper"
 )
 
 const (
@@ -31,8 +33,11 @@ const (
  platform    : %s/%s
 `
 
-	incrementMinor = "minor"
-	incrementPatch = "patch"
+	defaultConfigFlag  = "gotagger.json"
+	defaultDirtyFlag   = "none"
+	defaultModulesFlag = true
+	defaultPrefixFlag  = "v"
+	defaultRemoteFlag  = "origin"
 )
 
 var (
@@ -75,21 +80,26 @@ func (g *GoTagger) Run() int {
 	flags.SetOutput(g.Stderr)
 
 	flags.BoolVar(&g.force, "force", g.boolEnv("force", false), "force creation of a tag")
-	flags.BoolVar(&g.modules, "modules", g.boolEnv("modules", true), "enable go module versioning")
+	flags.BoolVar(&g.modules, "modules", g.boolEnv("modules", defaultModulesFlag), "enable go module versioning")
 	flags.BoolVar(&g.pushTag, "push", g.boolEnv("push", false), "push the just created tag, implies -release")
-	flags.StringVar(&g.remoteName, "remote", g.stringEnv("remote", "origin"), "name of the remote to push tags to")
+	flags.StringVar(&g.remoteName, "remote", g.stringEnv("remote", defaultRemoteFlag), "name of the remote to push tags to")
 	flags.BoolVar(&g.showVersion, "version", false, "show version information")
 	flags.BoolVar(&g.tagRelease, "release", g.boolEnv("release", false), "tag HEAD with the current version if it is a release commit")
-	flags.StringVar(&g.versionPrefix, "prefix", g.stringEnv("prefix", "v"), "set a prefix for versions")
-	flags.StringVar(&g.dirtyIncrement, "dirty", g.stringEnv("dirty", ""), "how to increment the version for a dirty checkout [minor, patch]")
-	flags.StringVar(&g.configFile, "config", g.stringEnv("config", ""), "path to the gotagger configuration file.")
+	flags.StringVar(&g.versionPrefix, "prefix", g.stringEnv("prefix", defaultPrefixFlag), "set a prefix for versions")
+	flags.StringVar(&g.dirtyIncrement, "dirty", g.stringEnv("dirty", defaultDirtyFlag), "how to increment the version for a dirty checkout [minor, patch, none]")
+	flags.StringVar(&g.configFile, "config", g.stringEnv("config", defaultConfigFlag), "path to the gotagger configuration file.")
 
-	if g.configFile == "" {
+	if g.configFile == defaultConfigFlag {
 		// If there's no config file provided, check for one locally.
-		defaultConfig := filepath.Join(g.WorkingDir, "gotagger.json")
-		_, err := os.Stat(defaultConfig)
-		if err == nil {
-			g.configFile = defaultConfig
+		defaultConfig := filepath.Join(g.WorkingDir, defaultConfigFlag)
+		if _, err := os.Stat(defaultConfig); err != nil {
+			if !errors.Is(err, os.ErrNotExist) {
+				g.err.Println("error: unable to read config file:", err)
+				return genericErrorExitCode
+			}
+
+			// no config file available
+			g.configFile = ""
 		}
 	}
 
@@ -99,12 +109,6 @@ func (g *GoTagger) Run() int {
 
 	g.setUsage(flags)
 	if err := flags.Parse(g.Args); err != nil {
-		return genericErrorExitCode
-	}
-
-	// validate dirty value: empty string, patch or minor
-	if !(g.dirtyIncrement == "" || g.dirtyIncrement == incrementMinor || g.dirtyIncrement == incrementPatch) {
-		g.err.Println("error: unsupported value for -dirty:", g.dirtyIncrement)
 		return genericErrorExitCode
 	}
 
@@ -171,11 +175,30 @@ func (g *GoTagger) Run() int {
 
 	r.Config.Force = g.force
 	r.Config.CreateTag = g.tagRelease || g.pushTag || g.force
-	r.Config.IgnoreModules = !g.modules
 	r.Config.PushTag = g.pushTag
 	r.Config.RemoteName = g.remoteName
-	r.Config.VersionPrefix = g.versionPrefix
-	r.Config.DirtyWorktreeIncrement = g.dirtyIncrement
+
+	//nolint: gosimple // makes this consistent with other flags,
+	// and avoids hard to understand double negatives
+	if g.modules != defaultModulesFlag {
+		r.Config.IgnoreModules = !g.modules
+	}
+	if g.versionPrefix != defaultPrefixFlag {
+		r.Config.VersionPrefix = g.versionPrefix
+	}
+	if g.dirtyIncrement != defaultDirtyFlag {
+		inc, err := mapper.Convert(g.dirtyIncrement)
+		if err != nil {
+			g.err.Println("error:", err)
+			return genericErrorExitCode
+		}
+
+		if inc == mapper.IncrementMajor {
+			g.err.Println("error: -dirty value must be minor, patch, or none")
+			return genericErrorExitCode
+		}
+		r.Config.DirtyWorktreeIncrement = inc
+	}
 
 	versions, err := r.TagRepo()
 	if err != nil {

@@ -9,7 +9,14 @@
   - [Installation](#installation)
 - [Getting started](#getting-started)
   - [Running](#running)
-    - [Customizing Version Increments](#customizing-version-increments)
+  - [Configuration](#configuration)
+    - [Default Increment](#default-increment)
+    - [Increment Dirty Worktree](#increment-dirty-worktree)
+    - [Exclude Modules](#exclude-modules)
+    - [Ignore Modules](#ignore-modules)
+    - [Increment Mappings](#increment-mappings)
+    - [Pre-Release Incrementing](#pre-release-incrementing)
+    - [Version Prefix](#version-prefix)
   - [Go Module Support](#go-module-support)
 - [Using gotagger as a library](#using-gotagger-as-a-library)
 - [Contributing](#contributing)
@@ -104,33 +111,12 @@ by using the `-push` flag.
 gotagger -release -push
 ```
 
-#### Customizing Version Increments
+### Configuration
 
-In some cases,
-you may wish to change which semantic version
-field should increment based on
-which commit type is provided.
-You can do this via a [config file](gotagger.json).
-The config file contains a mapping of commit type to semver increment
-and a default increment to use if it
-encounters an unknown commit type.
-For example:
-
-```json
-{
-  "incrementMappings": {
-    "feat": "minor",
-    "fix": "patch"
-  },
-  "defaultIncrement": "none"
-}
-```
-
-Running:
-
-```bash
-gotagger -config ./gotagger.json
-```
+Projects using `gotagger` can control some behaviors via a config file:
+*gotagger.json*.
+Check out the [gotagger.json](./gotagger.json) in this project
+to see an example configuration.
 
 If a `gotagger.json` file exists in the working directory,
 Gotagger will use it.
@@ -138,6 +124,92 @@ If no configuration is provided,
 Gotagger defaults to the current functionality,
 which is equivalent to what is defined in
 [gotagger.json](gotagger.json).
+
+If you want to place your config file in a non-standard location,
+then you must use the *-config* flag to tell `gotagger` where it is:
+
+```bash
+gotagger -config path/to/gotagger.json
+```
+
+#### Default Increment
+
+The *defaultIncrement* option
+controls how `gotagger` increments the version
+for commit types that are not listed in [incrementMappings](#increment-mappings).
+Allowed values are "minor", "patch", and "none".
+
+#### Increment Dirty Worktree
+
+The *incrementDirtyWorktree* option
+controls how `gotagger` increments the version
+when there are no new commits,
+but the worktree is dirty.
+Allowed values are "minor", "patch", and "none".
+
+#### Exclude Modules
+
+The *excludeModules* option
+controls which modules gotagger will attempt to version.
+
+#### Ignore Modules
+
+The *ignoreModules* option
+toggles `gotagger` support for [go modules](#go-module-support).
+If you are using gotagger to version a project written in another language,
+then set this to "true":
+
+```json
+{
+  "ignoreModules": true
+}
+```
+
+#### Increment Mappings
+
+The *incrementMappings* option
+controls which part of the semantic version
+`gotagger` increments for a given commit type.
+This option contains a mapping of commit type to semver increment
+For example, if your project uses "f" for commits that implement features,
+and "b" for commits that fix bugs:
+
+```json
+{
+  "incrementMappings": {
+    "f": "minor",
+    "b": "patch"
+  },
+}
+```
+
+#### Pre-Release Incrementing
+
+The *incrementPreReleaseMinor* option controls
+how `gotagger` increments pre-release versions
+for breaking changes.
+Normally, a breaking change will increment the MAJOR version.
+However, for pre-release versions,
+those with a MAJOR version of "0",
+some projects may want to increment the MINOR version instead.
+This is done by setting *incrementPreReleaseMinor* to "true".
+
+#### Version Prefix
+
+The *versionPrefix* option controls
+how `gotagger` prefixes the version it calculates.
+The default prefix is "v", as in "v2.3.4".
+Some projects may wish to have no prefix,
+which can be done by setting *versionPrefix* to the empty string:
+
+```json
+{
+  "versionPrefix": ""
+}
+```
+
+**Note**: go has very particular requirements about how tags are named,
+so avoid changing the version prefix if you are versioning a go module.
 
 ### Go Module Support
 

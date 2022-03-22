@@ -591,7 +591,7 @@ func TestGotagger_versioning(t *testing.T) {
 			},
 		},
 		{
-			title:  "mulit-module commit",
+			title:  "multi-module commit",
 			prefix: "v",
 			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
 				simpleGoRepo(t, r, p)
@@ -1299,7 +1299,7 @@ func TestGotagger_incrementVersion(t *testing.T) {
 	tests := []struct {
 		title          string
 		repoFunc       func(testutils.T, *sgit.Repository, string)
-		dirtyIncrement string
+		dirtyIncrement mapper.Increment
 		preMajor       bool
 		commits        []git.Commit
 		want           string
@@ -1351,17 +1351,17 @@ func TestGotagger_incrementVersion(t *testing.T) {
 		},
 		{
 			title:          "dirty minor",
-			dirtyIncrement: "minor",
+			dirtyIncrement: mapper.IncrementMinor,
 			want:           "0.2.0",
 		},
 		{
 			title:          "dirty patch",
-			dirtyIncrement: "patch",
+			dirtyIncrement: mapper.IncrementPatch,
 			want:           "0.1.1",
 		},
 		{
 			title:          "dirty unknown",
-			dirtyIncrement: "unknown",
+			dirtyIncrement: mapper.Increment(23),
 			want:           "0.1.0",
 		},
 	}
@@ -1372,8 +1372,8 @@ func TestGotagger_incrementVersion(t *testing.T) {
 		t.Run(tt.title, func(t *testing.T) {
 			t.Parallel()
 
-			g, repo, path, teardwon := newGotagger(t)
-			defer teardwon()
+			g, repo, path, teardown := newGotagger(t)
+			defer teardown()
 
 			if tt.repoFunc != nil {
 				tt.repoFunc(t, repo, path)
@@ -1573,159 +1573,6 @@ func TestGotagger_validateModules(t *testing.T) {
 				assert.NoError(t, err)
 			} else {
 				assert.EqualError(t, err, tt.want)
-			}
-		})
-	}
-}
-
-func TestGotagger_ReadCommitTypeMappings(t *testing.T) {
-	normalConfigFileData := `{
-  "incrementMappings": {
-    "feat": "minor",
-    "fix": "patch",
-    "refactor": "patch",
-    "perf": "patch",
-    "test": "patch",
-    "style": "patch",
-    "build": "none",
-    "chore": "none",
-    "ci": "none",
-    "docs": "none",
-    "revert": "none"
-  },
-  "defaultIncrement": "none"
-}`
-	duplicateMappingConfigData := `{
-  "incrementMappings": {
-    "feat": "minor",
-    "feat": "patch"
-  },
-  "defaultIncrement": "none"
-}`
-	unknownTypeConfigData := `{
-  "incrementMappings": {
-    "feet": "minor"
-  },
-  "defaultIncrement": "none"
-}`
-	noDefaultConfigData := `{
-  "incrementMappings": {
-    "feat": "minor"
-  }
-}`
-	releaseDefinedConfigData := `{
-  "incrementMappings": {
-    "release": "minor"
-  }
-}`
-	bumpMajorConfigData := `{
-  "incrementMappings": {
-    "feat": "major"
-  }
-}`
-	invalidIncrementConfigData := `{
-  "incrementMappings": {
-    "feat": "supermajor"
-  },
-  "defaultIncrement": "none"
-}`
-
-	tests := []struct {
-		title           string
-		commitTypeTable mapper.Table
-		configFileData  string
-		wantErr         string
-	}{
-		{
-			title:           "no config",
-			commitTypeTable: mapper.Table{},
-			configFileData:  "",
-			wantErr:         "unexpected end of JSON input",
-		},
-		{
-			title: "good config",
-			commitTypeTable: mapper.NewTable(mapper.Mapper{
-				mapper.TypeFeature:     mapper.IncrementMinor,
-				mapper.TypeRelease:     mapper.IncrementPatch,
-				mapper.TypeBugFix:      mapper.IncrementPatch,
-				mapper.TypeRefactor:    mapper.IncrementPatch,
-				mapper.TypePerformance: mapper.IncrementPatch,
-				mapper.TypeTest:        mapper.IncrementPatch,
-				mapper.TypeStyle:       mapper.IncrementPatch,
-				mapper.TypeBuild:       mapper.IncrementNone,
-				mapper.TypeChore:       mapper.IncrementNone,
-				mapper.TypeCI:          mapper.IncrementNone,
-				mapper.TypeDocs:        mapper.IncrementNone,
-				mapper.TypeRevert:      mapper.IncrementNone,
-			}, mapper.IncrementNone),
-			configFileData: normalConfigFileData,
-			wantErr:        "",
-		},
-		{
-			title: "duplicate mapping",
-			commitTypeTable: mapper.NewTable(mapper.Mapper{
-				mapper.TypeFeature: mapper.IncrementPatch,
-				mapper.TypeRelease: mapper.IncrementPatch,
-			}, mapper.IncrementNone),
-			configFileData: duplicateMappingConfigData,
-			wantErr:        "",
-		},
-		{
-			title: "unknown commit type",
-			commitTypeTable: mapper.NewTable(mapper.Mapper{
-				"feet":             mapper.IncrementMinor,
-				mapper.TypeRelease: mapper.IncrementPatch,
-			}, mapper.IncrementNone),
-			configFileData: unknownTypeConfigData,
-			wantErr:        "",
-		},
-		{
-			title:           "release not allowed",
-			commitTypeTable: mapper.Table{},
-			configFileData:  releaseDefinedConfigData,
-			wantErr:         "release mapping is not allowed",
-		},
-		{
-			title:           "attempt major increment",
-			commitTypeTable: mapper.Table{},
-			configFileData:  bumpMajorConfigData,
-			wantErr:         "major version increments cannot be mapped to commit types. use the commit spec directives for this",
-		},
-		{
-			title: "no default",
-			commitTypeTable: mapper.NewTable(mapper.Mapper{
-				mapper.TypeFeature: mapper.IncrementMinor,
-				mapper.TypeRelease: mapper.IncrementPatch,
-			}, mapper.IncrementNone),
-			configFileData: noDefaultConfigData,
-			wantErr:        "",
-		},
-		{
-			title:           "invalid increment",
-			commitTypeTable: mapper.Table{},
-			configFileData:  invalidIncrementConfigData,
-			wantErr:         "invalid version increment 'supermajor'",
-		},
-		{
-			title:           "invalid json",
-			commitTypeTable: mapper.Table{},
-			configFileData:  "{ this is bad json",
-			wantErr:         "invalid character 't' looking for beginning of object key string",
-		},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.title, func(t *testing.T) {
-			t.Parallel()
-			cfg := Config{CommitTypeTable: tt.commitTypeTable}
-
-			err := cfg.ParseJSON([]byte(tt.configFileData))
-			if tt.wantErr == "" {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.commitTypeTable, cfg.CommitTypeTable)
-			} else {
-				assert.EqualError(t, err, tt.wantErr)
 			}
 		})
 	}

@@ -4,7 +4,6 @@
 package gotagger
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -35,113 +34,6 @@ var (
 	ErrNoSubmodule = errors.New("no submodule found")
 	ErrNotRelease  = errors.New("HEAD is not a release commit")
 )
-
-// Config represents how to tag a repo. If not default is mentioned, the option defaults
-// to go's zero-value.
-type Config struct {
-	// CreateTag represents whether to create the tag.
-	CreateTag bool
-
-	// ExcludeModules is a list of module names or paths to exclude.
-	ExcludeModules []string
-
-	// IgnoreModules controls whether gotagger will ignore the existence of
-	// go.mod files when determining how to version a project.
-	IgnoreModules bool
-
-	// RemoteName represents the name of the remote repository. Defaults to origin.
-	RemoteName string
-
-	// PreMajor controls whether gotagger will increase the major version from 0
-	// to 1 for breaking changes.
-	PreMajor bool
-
-	// PushTag represents whether to push the tag to the remote git repository.
-	PushTag bool
-
-	// VersionPrefix is a string that will be added to the front of the version. Defaults to 'v'.
-	VersionPrefix string
-
-	// DirtyWorktreeIncrement is a string that sets how to increment the version
-	// if there are no new commits, but the worktree is "dirty".
-	DirtyWorktreeIncrement string
-
-	// Mappings mapping of commit type to semantic version increment. Used to populate a mapper.Table.
-	Mappings map[string]string `json:"incrementMappings"`
-
-	// DefaultIncrement if the commit type is not available in Mappings, increment by this amount.
-	DefaultIncrement string `json:"defaultIncrement"`
-
-	// CommitTypeTable used for looking up version increments based on the commit type.
-	CommitTypeTable mapper.Table
-
-	// Force controlls whether gotagger will create a tag even if HEAD is not a "release" commit.
-	Force bool
-
-	/* TODO
-	// PreRelease is the string that will be used to generate pre-release versions. The
-	// string may be a Golang text template. Valid arguments are:
-	//
-	//	- .CommitsSince
-	//		The number of commits since the previous release.
-	PreRelease string
-	*/
-}
-
-// ParseJSON unmarshals a byte slic containing mappings of commit type to semver increment. Mappings determine
-// how much to increment the semver based on the commit type. The 'release' commit type has special meaning to gotagger
-// and cannot be overridden in the config file. Unknown commit types will fall back to the config default.
-// Invalid increments will throw an error. Duplicate type definitions will take the last entry.
-func (c *Config) ParseJSON(data []byte) error {
-	err := json.Unmarshal(data, &c)
-	if err != nil {
-		return err
-	}
-
-	if _, ok := c.Mappings["release"]; ok {
-		return fmt.Errorf("release mapping is not allowed")
-	}
-	c.Mappings["release"] = "patch"
-
-	table := mapper.Mapper{}
-	for typ, inc := range c.Mappings {
-		conversion, err := mapper.Convert(inc)
-		if err != nil {
-			return err
-		}
-
-		if conversion == mapper.IncrementMajor {
-			return fmt.Errorf("major version increments cannot be mapped to commit types. use the commit spec directives for this")
-		}
-
-		table[typ] = conversion
-		continue
-	}
-
-	def, err := mapper.Convert(c.DefaultIncrement)
-	if err != nil {
-		return err
-	}
-	c.CommitTypeTable = mapper.NewTable(table, def)
-
-	return nil
-}
-
-// NewDefaultConfig returns a Config with default options set.
-//
-// If an option is not mentioned, then the default is the zero-value for its type.
-//
-//	- RemoteName
-//		origin
-//	- VersionPrefix
-//		v
-func NewDefaultConfig() Config {
-	return Config{
-		RemoteName:      "origin",
-		VersionPrefix:   "v",
-		CommitTypeTable: mapper.NewTable(nil, mapper.IncrementPatch),
-	}
-}
 
 type Gotagger struct {
 	Config Config
@@ -394,9 +286,9 @@ func (g *Gotagger) incrementVersion(v *semver.Version, commits []igit.Commit) (s
 		}
 
 		switch {
-		case isDirty && g.Config.DirtyWorktreeIncrement == "minor":
+		case isDirty && g.Config.DirtyWorktreeIncrement == mapper.IncrementMinor:
 			return v.IncMinor().String(), nil
-		case isDirty && g.Config.DirtyWorktreeIncrement == "patch":
+		case isDirty && g.Config.DirtyWorktreeIncrement == mapper.IncrementPatch:
 			return v.IncPatch().String(), nil
 		default:
 			return v.String(), nil

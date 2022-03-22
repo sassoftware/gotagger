@@ -70,6 +70,11 @@ func NewTable(tm Mapper, defInc Increment) Table {
 // Get returns the configured increment for the provided commit type. Returns the default increment if no mapping for
 // the input type is found.
 func (t Table) Get(typ string) Increment {
+	// release type is always a patch increment
+	if typ == TypeRelease {
+		return IncrementPatch
+	}
+
 	inc, ok := t.Mapper[typ]
 	if !ok {
 		return t.defaultInc

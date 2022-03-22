@@ -149,7 +149,7 @@ func TestGoTagger(t *testing.T) {
 		{
 			title:   "invalid dirty option",
 			args:    []string{"-dirty=foo"},
-			wantErr: "error: unsupported value for -dirty: foo",
+			wantErr: "error: invalid version increment 'foo'",
 			wantRc:  1,
 		},
 		{
@@ -169,6 +169,12 @@ func TestGoTagger(t *testing.T) {
 				testutils.CreateTag(t, repo, path, "v1.3.0")
 				require.NoError(t, ioutil.WriteFile(filepath.Join(path, "foo"), []byte("foo\n"), 0600))
 			},
+		},
+		{
+			title:   "dirty major",
+			args:    []string{"-dirty=major"},
+			wantErr: "error: -dirty value must be minor, patch, or none",
+			wantRc:  1,
 		},
 		{
 			title:     "force flag",
