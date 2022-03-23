@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/sassoftware/gotagger/internal/git"
 	"github.com/sassoftware/gotagger/internal/testutils"
 	"github.com/stretchr/testify/assert"
@@ -24,6 +25,7 @@ func TestWindowsPaths(t *testing.T) {
 
 	g := &Gotagger{
 		Config: NewDefaultConfig(),
+		logger: logr.Discard(),
 		repo:   r,
 	}
 

@@ -53,10 +53,8 @@ TOOLREQS = tools/go.mod tools/go.sum
 all: lint build test
 
 .PHONY: build
-build: $(TARGET)
-
-$(TARGET):
-	$(GOBUILD) $(BUILDFLAGS) -o $@ ./cmd/gotagger/main.go
+build:
+	$(GOBUILD) $(BUILDFLAGS) -o $(TARGET) ./cmd/gotagger/main.go
 
 
 .PHONY: changelog

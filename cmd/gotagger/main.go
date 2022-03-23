@@ -15,7 +15,10 @@ import (
 	"runtime/pprof"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/go-logr/zerologr"
+	"github.com/rs/zerolog"
 	"github.com/sassoftware/gotagger"
 	"github.com/sassoftware/gotagger/mapper"
 )
@@ -60,6 +63,7 @@ type GoTagger struct {
 
 	// command-line options
 	configFile     string
+	debug          bool
 	dirtyIncrement string
 	force          bool
 	modules        bool
@@ -88,20 +92,7 @@ func (g *GoTagger) Run() int {
 	flags.StringVar(&g.versionPrefix, "prefix", g.stringEnv("prefix", defaultPrefixFlag), "set a prefix for versions")
 	flags.StringVar(&g.dirtyIncrement, "dirty", g.stringEnv("dirty", defaultDirtyFlag), "how to increment the version for a dirty checkout [minor, patch, none]")
 	flags.StringVar(&g.configFile, "config", g.stringEnv("config", defaultConfigFlag), "path to the gotagger configuration file.")
-
-	if g.configFile == defaultConfigFlag {
-		// If there's no config file provided, check for one locally.
-		defaultConfig := filepath.Join(g.WorkingDir, defaultConfigFlag)
-		if _, err := os.Stat(defaultConfig); err != nil {
-			if !errors.Is(err, os.ErrNotExist) {
-				g.err.Println("error: unable to read config file:", err)
-				return genericErrorExitCode
-			}
-
-			// no config file available
-			g.configFile = ""
-		}
-	}
+	flags.BoolVar(&g.debug, "debug", false, "enable debug output")
 
 	// profiling options
 	cpuprofile := flags.String("cpuprofile", "", "write cpu profile to file")
@@ -112,7 +103,24 @@ func (g *GoTagger) Run() int {
 		return genericErrorExitCode
 	}
 
+	zerolog.SetGlobalLevel(zerolog.Disabled)
+	if g.debug {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	}
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnixMs
+	zerologr.NameFieldName = "logger"
+	zerologr.NameSeparator = "/"
+	zl := zerolog.New(zerolog.ConsoleWriter{Out: g.Stderr, TimeFormat: time.StampMicro})
+	zl = zl.With().Caller().Timestamp().Logger()
+
+	rootLogger := zerologr.New(&zl)
+
+	// we only really log debug messages,
+	// so force the V-level to 1
+	logger := rootLogger.WithName("main").V(1)
+
 	if *cpuprofile != "" {
+		logger.Info("enabling cpu profiling", "path", *cpuprofile)
 		f, err := os.Create(filepath.Join(g.WorkingDir, *cpuprofile))
 		if err != nil {
 			g.err.Println("error: could not create CPU profile:", err)
@@ -120,6 +128,7 @@ func (g *GoTagger) Run() int {
 		}
 		defer f.Close()
 
+		logger.Info("starting cpu profiling")
 		if err := pprof.StartCPUProfile(f); err != nil {
 			g.err.Println("error: could not start CPU profile:", err)
 			return genericErrorExitCode
@@ -128,6 +137,7 @@ func (g *GoTagger) Run() int {
 	}
 
 	if *memprofile != "" {
+		logger.Info("enabling memory profiling", "path", *memprofile)
 		f, err := os.Create(filepath.Join(g.WorkingDir, *memprofile))
 		if err != nil {
 			g.err.Println("error: could not create memory profile:", err)
@@ -137,6 +147,7 @@ func (g *GoTagger) Run() int {
 
 		defer func() {
 			runtime.GC()
+			logger.Info("writing out memory profile")
 			if err := pprof.WriteHeapProfile(f); err != nil {
 				g.err.Fatal("error: could not write memory profile:", err)
 			}
@@ -159,17 +170,24 @@ func (g *GoTagger) Run() int {
 		return genericErrorExitCode
 	}
 
-	if g.configFile != "" {
-		data, err := os.ReadFile(g.configFile)
-		if err != nil {
-			g.err.Println("error:", err)
-			return genericErrorExitCode
-		}
+	r.SetLogger(rootLogger)
 
-		err = r.Config.ParseJSON(data)
-		if err != nil {
-			g.err.Println("error:", err)
-			return genericErrorExitCode
+	if g.configFile != "" {
+		logger.Info("reading config file", "path", g.configFile)
+		data, err := os.ReadFile(g.configFile)
+		// ignore a missing "default" config file
+		if !(g.configFile == defaultConfigFlag && errors.Is(err, os.ErrNotExist)) {
+			if err != nil {
+				g.err.Println("error:", err)
+				return genericErrorExitCode
+			}
+
+			logger.Info("parsing config data", "path", g.configFile)
+			err = r.Config.ParseJSON(data)
+			if err != nil {
+				g.err.Println("error:", err)
+				return genericErrorExitCode
+			}
 		}
 	}
 
@@ -200,7 +218,12 @@ func (g *GoTagger) Run() int {
 		r.Config.DirtyWorktreeIncrement = inc
 	}
 
+	start := time.Now()
+	logger.Info("calculating version", "start", start)
 	versions, err := r.TagRepo()
+	dur := time.Since(start)
+	logger.Info("done calculating version", "duration", dur)
+
 	if err != nil {
 		g.err.Println("error:", err)
 		return genericErrorExitCode
