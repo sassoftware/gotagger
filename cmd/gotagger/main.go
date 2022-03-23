@@ -151,20 +151,20 @@ func (g *GoTagger) Run() int {
 	}
 	r, err := gotagger.New(path)
 	if err != nil {
-		g.err.Println("error: ", err)
+		g.err.Println("error:", err)
 		return genericErrorExitCode
 	}
 
 	if g.configFile != "" {
 		data, err := os.ReadFile(g.configFile)
 		if err != nil {
-			g.err.Println("error: ", err)
+			g.err.Println("error:", err)
 			return genericErrorExitCode
 		}
 
 		err = r.Config.ParseJSON(data)
 		if err != nil {
-			g.err.Println("error: ", err)
+			g.err.Println("error:", err)
 			return genericErrorExitCode
 		}
 	}
@@ -179,7 +179,7 @@ func (g *GoTagger) Run() int {
 
 	versions, err := r.TagRepo()
 	if err != nil {
-		g.err.Println("error: ", err)
+		g.err.Println("error:", err)
 		return genericErrorExitCode
 	}
 
@@ -258,7 +258,7 @@ func main() {
 		Args:       os.Args[1:],
 		Env:        os.Environ(),
 		Stdout:     os.Stdout,
-		Stderr:     os.Stdin,
+		Stderr:     os.Stderr,
 		WorkingDir: wd,
 	}
 
