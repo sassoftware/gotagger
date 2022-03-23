@@ -349,7 +349,7 @@ func (g *Gotagger) latest(tags []string) (latest *semver.Version, hash string, e
 
 // latestModule returns the latest version of m and the hash of the commit
 // tagged with that version.
-func (g *Gotagger) latestModule(m module, tags []string) (latest *semver.Version, hash string, err error) {
+func (g *Gotagger) latestModule(m module, tags []string) (*semver.Version, string, error) {
 	logger := g.logger.WithValues("module", m.name, "module_prefix", m.prefix, "module_path", m.path)
 	logger.Info("finding latest tag for module")
 
@@ -357,6 +357,7 @@ func (g *Gotagger) latestModule(m module, tags []string) (latest *semver.Version
 	if majorVersion == "" {
 		majorVersion = "v1"
 	}
+
 	moduleVersion, err := semver.NewVersion(majorVersion + ".0.0")
 	if err != nil {
 		return nil, "", err
@@ -364,23 +365,29 @@ func (g *Gotagger) latestModule(m module, tags []string) (latest *semver.Version
 
 	maximumVersion := moduleVersion.IncMajor()
 	logger.Info("ignoring modules greater than " + g.Config.VersionPrefix + maximumVersion.String())
-	latest = new(semver.Version)
+
+	var latestVersion *semver.Version
+	var latestTag string
 	for _, tag := range tags {
 		// strip the module prefix from the tag so we can parse it as a semver
 		tagName := strings.TrimPrefix(tag, m.prefix)
 		// we want the highest version that is less than the next major version
-		if tver, err := semver.NewVersion(tagName); err == nil && tver.LessThan(&maximumVersion) && tver.GreaterThan(latest) {
-			logger.Info("found newer tag", "tag", tag)
-			hash, err = g.repo.RevParse(tag + "^{commit}")
-			if err != nil {
-				return nil, "", err
+		if tver, err := semver.NewVersion(tagName); err == nil && tver.LessThan(&maximumVersion) {
+			if latestVersion == nil || latestVersion.LessThan(tver) {
+				logger.Info("found newer tag", "tag", tag)
+				latestVersion = tver
+				latestTag = tag
 			}
-			latest = tver
 		}
 	}
 
-	logger.Info("found latest tag", "tag", latest, "commit", hash)
-	return latest, hash, nil
+	hash, err := g.repo.RevParse(latestTag + "^{commit}")
+	if err != nil {
+		return nil, "", err
+	}
+
+	logger.Info("found latest tag", "tag", latestVersion, "commit", hash)
+	return latestVersion, hash, nil
 }
 
 func (g *Gotagger) parseCommits(cs []igit.Commit, v *semver.Version) (vinc mapper.Increment) {
