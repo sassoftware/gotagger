@@ -435,14 +435,17 @@ func (g *Gotagger) validateCommit(c igit.Commit, modules []module, commitModules
 		return nil
 	}
 
+	// map modules by path for faster lookup
+	modulesByPath := mapModulesByPath(modules)
+
 	if c.Type == mapper.TypeRelease {
 		// generate a list of modules changed by this commit
 		var changedModules []module
 		for _, change := range c.Changes {
-			if mod, ok := isModuleFile(change.SourceName, modules); ok {
+			if mod, ok := isModuleFile(change.SourceName, modulesByPath); ok {
 				logger.Info("module affected by commit", "module", mod.name, "path", change.SourceName)
 				changedModules = append(changedModules, mod)
-			} else if mod, ok := isModuleFile(change.DestName, modules); ok {
+			} else if mod, ok := isModuleFile(change.DestName, modulesByPath); ok {
 				logger.Info("module affected by commit", "module", mod.name, "path", change.DestName)
 				changedModules = append(changedModules, mod)
 			}
@@ -625,18 +628,21 @@ func extractCommitModules(c igit.Commit, modules []module) ([]module, error) {
 func filterCommitsByModule(mod module, commits []igit.Commit, modules []module, logger logr.Logger) []igit.Commit {
 	logger.Info("filtering commits for module", "module", mod.name)
 
+	// map modules by path for faster lookup
+	modulesByPath := mapModulesByPath(modules)
+
 	grouped := make(map[module][]igit.Commit)
 	for _, commit := range commits {
 		logger = logger.WithValues("commit", commit.Hash)
 		for _, change := range commit.Changes {
-			if m, ok := isModuleFile(change.SourceName, modules); ok {
+			if m, ok := isModuleFile(change.SourceName, modulesByPath); ok {
 				logger.Info("module affected by commit", "module", m.name, "path", change.SourceName)
 				grouped[m] = append(grouped[m], commit)
 				continue
 			}
 			// check if the dest name touched this module
 			if change.DestName != "" {
-				if m, ok := isModuleFile(change.DestName, modules); ok {
+				if m, ok := isModuleFile(change.DestName, modulesByPath); ok {
 					logger.Info("module affected by commit", "module", m.name, "path", change.DestName)
 					grouped[m] = append(grouped[m], commit)
 					continue
@@ -648,13 +654,7 @@ func filterCommitsByModule(mod module, commits []igit.Commit, modules []module, 
 	return grouped[mod]
 }
 
-func isModuleFile(filename string, modules []module) (mod module, ok bool) {
-	// make map of module path to module for quicker lookup below
-	moduleMap := map[string]module{}
-	for _, m := range modules {
-		moduleMap[m.path] = m
-	}
-
+func isModuleFile(filename string, moduleMap map[string]module) (mod module, ok bool) {
 	for dir := filepath.Dir(filename); ; dir = filepath.Dir(dir) {
 		mod, ok = moduleMap[dir]
 		// break out of the loop if we found a module or hit the root path
@@ -664,6 +664,16 @@ func isModuleFile(filename string, modules []module) (mod module, ok bool) {
 	}
 
 	return
+}
+
+func mapModulesByPath(modules []module) map[string]module {
+	// make map of module path to module for quicker lookup
+	moduleMap := map[string]module{}
+	for _, m := range modules {
+		moduleMap[m.path] = m
+	}
+
+	return moduleMap
 }
 
 func normalizePath(p string) string {
@@ -685,15 +695,15 @@ func normalizePath(p string) string {
 
 func validateCommitModules(commitModules, changedModules []module) (err error) {
 	// create a set of commit modules
-	commitMap := make(map[string]bool)
+	commitMap := make(map[string]struct{})
 	for _, m := range commitModules {
-		commitMap[m.name] = true
+		commitMap[m.name] = struct{}{}
 	}
 
 	// create a set of changed modules
-	changedMap := make(map[string]bool)
+	changedMap := make(map[string]struct{})
 	for _, m := range changedModules {
-		changedMap[m.name] = true
+		changedMap[m.name] = struct{}{}
 	}
 
 	var extra []string
