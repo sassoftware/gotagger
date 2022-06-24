@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/sassoftware/gotagger/internal/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -68,7 +69,7 @@ func TestCreateTag(t *testing.T) {
 		t.Run(fmt.Sprint(tt.want), func(t *testing.T) {
 			tt := tt
 
-			r := &Repository{GitDir: ".git", Path: "path", runner: mockRunGitCommand(t, tt.want, "path")}
+			r := &Repository{GitDir: ".git", Path: "path", runner: mockRunGitCommand(t, tt.want, "path"), logger: logr.Discard()}
 			_ = r.CreateTag("hash", "v1.0.0", tt.message, tt.signed)
 		})
 	}
@@ -176,7 +177,7 @@ func TestIsDirty(t *testing.T) {
 func TestPushTags(t *testing.T) {
 	wantArgs := []string{"--git-dir", ".git", "push", "origin", "refs/tags/v1.0.0:refs/tags/v1.0.0"}
 	wantPath := "path"
-	r := &Repository{GitDir: ".git", Path: "path", runner: mockRunGitCommand(t, wantArgs, wantPath)}
+	r := &Repository{GitDir: ".git", Path: "path", runner: mockRunGitCommand(t, wantArgs, wantPath), logger: logr.Discard()}
 	_ = r.PushTags([]string{"v1.0.0"}, "origin")
 }
 

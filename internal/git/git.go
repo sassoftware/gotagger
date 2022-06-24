@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"github.com/sassoftware/gotagger/internal/commit"
 )
 
@@ -42,6 +43,7 @@ type Repository struct {
 	Path   string
 
 	runner func([]string, string) (string, error)
+	logger logr.Logger
 }
 
 // New returns a new git Repo. If path is not a git repo, then an error will be returned.
@@ -64,6 +66,7 @@ func New(path string) (*Repository, error) {
 		GitDir: gitDir,
 		Path:   path,
 		runner: runGitCommand,
+		logger: logr.Discard(),
 	}
 
 	return repo, nil
@@ -73,12 +76,15 @@ func New(path string) (*Repository, error) {
 //
 // If prefix is a non-empty string, then the version will be prefixed with that string.
 func (r *Repository) CreateTag(hash, name, message string, signed bool) error {
+	r.logger.V(1).Info("creating tag")
+
 	if message == "" {
 		message = "Release " + name
 	}
 
 	args := []string{"tag"}
 	if signed {
+		r.logger.V(1).Info("signing tag")
 		args = append(args, "-s")
 	}
 
@@ -91,6 +97,7 @@ func (r *Repository) CreateTag(hash, name, message string, signed bool) error {
 func (r *Repository) DeleteTags(tags []string) error {
 	var errorMsg string
 	for _, tag := range tags {
+		r.logger.V(1).Info("deleting tag", "tag", tag)
 		if _, terr := r.run([]string{"tag", "-d", tag}); terr != nil {
 			if errorMsg == "" {
 				errorMsg = "could not delete tags:"
@@ -108,6 +115,7 @@ func (r *Repository) DeleteTags(tags []string) error {
 
 // Head returns the commit at HEAD
 func (r *Repository) Head() (Commit, error) {
+	r.logger.V(1).Info("getting HEAD commit")
 	commits, err := r.RevList("HEAD", "HEAD^")
 	if err != nil {
 		return Commit{}, err
@@ -129,6 +137,7 @@ func (r *Repository) PushTag(tag string, remote string) error {
 
 // PushTags pushes tags to the remote repository remote.
 func (r *Repository) PushTags(tags []string, remote string) error {
+	r.logger.V(1).Info("pushing tags", "tags", tags)
 	refSpecs := make([]string, len(tags))
 	for i, tag := range tags {
 		refname := "refs/tags/" + tag
@@ -149,14 +158,19 @@ func (r *Repository) RevList(start, end string, paths ...string) ([]Commit, erro
 	args := []string{"log", "--format=raw", "--raw", "--no-abbrev", start}
 
 	// add start and end refs
+	logger := r.logger.V(1).WithValues("start", start)
 	if end != "" {
+		logger = logger.WithValues("end", end)
 		args = append(args, "^"+end)
 	}
 
 	if len(paths) > 0 {
+		logger = logger.WithValues("paths", strings.Join(paths, ", "))
 		args = append(args, "--")
 		args = append(args, paths...)
 	}
+
+	logger.Info("listing commits")
 
 	out, err := r.run(args)
 	if err != nil {
@@ -180,6 +194,11 @@ func (r *Repository) RevParse(rev string) (string, error) {
 	return strings.TrimSpace(out), nil
 }
 
+// SetLogger updates the Repository's internal logger.
+func (r *Repository) SetLogger(l logr.Logger) {
+	r.logger = l
+}
+
 // Tags returns all tags that point to ancestors of rev.
 //
 // rev can be either a revision or a hash.
@@ -193,6 +212,9 @@ func (r *Repository) Tags(rev string, prefixes ...string) (tags []string, err er
 		for _, p := range prefixes {
 			args = append(args, p+"*")
 		}
+		r.logger.V(1).Info("getting tags matching prefixes", "from", rev, "prefixes", strings.Join(prefixes, ", "))
+	} else {
+		r.logger.V(1).Info("getting tags", "from", rev)
 	}
 
 	out, err := r.run(args)
@@ -208,6 +230,7 @@ func (r *Repository) Tags(rev string, prefixes ...string) (tags []string, err er
 
 func (r *Repository) run(args []string) (string, error) {
 	args = append([]string{"--git-dir", r.GitDir}, args...)
+	r.logger.V(1).Info("running git command", "args", strings.Join(args, " "))
 	return r.runner(args, r.Path)
 }
 

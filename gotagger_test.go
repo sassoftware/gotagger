@@ -13,6 +13,7 @@ import (
 	sgit "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-logr/logr"
 	"github.com/sassoftware/gotagger/internal/commit"
 	"github.com/sassoftware/gotagger/internal/git"
 	"github.com/sassoftware/gotagger/internal/testutils"
@@ -1505,7 +1506,7 @@ func Test_filterCommitsByModule(t *testing.T) {
 			commits, err := g.repo.RevList("HEAD", "")
 			require.NoError(t, err)
 
-			commits = filterCommitsByModule(tt.mod, commits, modules)
+			commits = filterCommitsByModule(tt.mod, commits, modules, logr.Discard())
 
 			// convert to a map of modules to commit subject
 			messages := make([]string, len(commits))
@@ -1590,6 +1591,7 @@ func newGotagger(t testutils.T) (g *Gotagger, repo *sgit.Repository, path string
 
 	g = &Gotagger{
 		Config: NewDefaultConfig(),
+		logger: logr.Discard(),
 		repo:   r,
 	}
 
