@@ -187,18 +187,18 @@ func (g *Gotagger) findAllModules(include []string) (modules []module, err error
 	g.logger.Info("finding modules")
 
 	// either return all modules, or only explicitly included modules
-	modinclude := map[string]bool{}
+	modinclude := map[string]struct{}{}
 	for _, name := range include {
 		g.logger.Info("explicitly including module", "module", name)
-		modinclude[name] = true
+		modinclude[name] = struct{}{}
 	}
 
 	// ignore these modules
-	modexclude := map[string]bool{}
+	modexclude := map[string]struct{}{}
 	pathexclude := make([]string, len(g.Config.ExcludeModules))
 	for i, name := range g.Config.ExcludeModules {
 		g.logger.Info("excluding module", "module", name)
-		modexclude[name] = true
+		modexclude[name] = struct{}{}
 		pathexclude[i] = normalizePath(name)
 	}
 
@@ -216,7 +216,7 @@ func (g *Gotagger) findAllModules(include []string) (modules []module, err error
 			// don't recurse into directories that start with '.', '_', or are named 'testdata'
 			dirname := info.Name()
 			if dirname != "." && (strings.HasPrefix(dirname, ".") || strings.HasPrefix(dirname, "_") || dirname == "testdata") {
-				logger.Info("not recursing into directory")
+				logger.Info("not recursing into directory: ignored by default")
 				return filepath.SkipDir
 			}
 
@@ -228,6 +228,7 @@ func (g *Gotagger) findAllModules(include []string) (modules []module, err error
 		if err != nil {
 			return err
 		}
+
 		if strings.HasSuffix(relPath, filepathSep+goMod) || relPath == goMod {
 			logger.Info("found go module")
 			data, err := ioutil.ReadFile(pth)
@@ -246,7 +247,7 @@ func (g *Gotagger) findAllModules(include []string) (modules []module, err error
 					return nil
 				}
 
-				// ingore module if it is excluded by name
+				// ignore module if it is excluded by name
 				if _, excludeName := modexclude[modName]; excludeName {
 					logger.Info("ignoring excluded module")
 					// ignore this module
@@ -285,6 +286,10 @@ func (g *Gotagger) findAllModules(include []string) (modules []module, err error
 
 		return nil
 	})
+
+	if len(modules) > 0 && len(g.Config.Paths) > 0 {
+		err = errors.New("cannot use path filtering with go modules")
+	}
 
 	sortByPath(modules).Sort()
 	return
@@ -328,13 +333,14 @@ func (g *Gotagger) incrementVersion(v *semver.Version, commits []igit.Commit) (s
 	}
 }
 
-func (g *Gotagger) latest(tags []string) (latest *semver.Version, hash string, err error) {
-
-	g.logger.Info("finding latest tag")
+func (g *Gotagger) latest(tags []string, prefix string) (latest *semver.Version, hash string, err error) {
+	logger := g.logger.WithValues("prefix", prefix)
+	logger.Info("finding latest tag")
 
 	latest = &semver.Version{}
 	for _, tag := range tags {
-		if tver, err := semver.NewVersion(tag); err == nil && latest.LessThan(tver) {
+		tagName := strings.TrimPrefix(tag, prefix)
+		if tver, err := semver.NewVersion(tagName); err == nil && latest.LessThan(tver) {
 			g.logger.Info("found newer tag", "tag", tver)
 			hash, err = g.repo.RevParse(tag + "^{commit}")
 			if err != nil {
@@ -349,7 +355,7 @@ func (g *Gotagger) latest(tags []string) (latest *semver.Version, hash string, e
 
 // latestModule returns the latest version of m and the hash of the commit
 // tagged with that version.
-func (g *Gotagger) latestModule(m module, tags []string) (*semver.Version, string, error) {
+func (g *Gotagger) latestModule(tags []string, m module) (*semver.Version, string, error) {
 	logger := g.logger.WithValues("module", m.name, "module_prefix", m.prefix, "module_path", m.path)
 	logger.Info("finding latest tag for module")
 
@@ -484,7 +490,7 @@ func (g *Gotagger) versionsModules(modules []module, commitModules []module) ([]
 	for i, mod := range commitModules {
 		logger := g.logger.WithValues("module", mod.name)
 
-		// we determine the tag prefix by concatinating the module prefix, the
+		// we determine the tag prefix by concatenating the module prefix, the
 		// version prefix, and the major version of this module.
 		// the major version is the version part of the module name
 		// (foo/v2, foo/v3) normalized to 'X.'
@@ -501,25 +507,29 @@ func (g *Gotagger) versionsModules(modules []module, commitModules []module) ([]
 		logger.Info("found tags", "tags", tags)
 
 		// get latest commit for this module
-		latest, hash, err := g.latestModule(mod, tags)
+		latest, hash, err := g.latestModule(tags, mod)
 		if err != nil {
 			return nil, err
 		}
 
-		// find the commits between HEAD and latest that touched the module
+		// Find the commits between HEAD and latest
+		// that touched any path under the module.
+		// This list will need further filtering to deal with modules
+		// that are sub-directories of this module.
 		commits, err := g.repo.RevList(head, hash, mod.path)
 		if err != nil {
 			return nil, fmt.Errorf("could not fetch commits HEAD..%s: %w", hash, err)
 		}
 
-		// filter out commits that do not touch this module
-		commits = filterCommitsByModule(mod, commits, modules, logger)
+		// group the commits by the modules they affected
+		commitsByModule := g.groupCommitsByModule(commits, modules)
 
-		version, err := g.incrementVersion(latest, commits)
+		version, err := g.incrementVersion(latest, commitsByModule[mod])
 		if err != nil {
 			return nil, fmt.Errorf("could not increment version: %w", err)
 		}
-		versions[i] = mod.prefix + g.Config.VersionPrefix + version
+
+		versions[i] = prefix + version
 	}
 
 	return versions, nil
@@ -528,14 +538,36 @@ func (g *Gotagger) versionsModules(modules []module, commitModules []module) ([]
 func (g *Gotagger) versionsSimple() ([]string, error) {
 	// simple version calculation where we consider all tags that match the
 	// configured prefix
-	tags, err := g.repo.Tags(head, g.Config.VersionPrefix)
+
+	// need to ensure we default to the root path, "."
+	if len(g.Config.Paths) == 0 {
+		g.Config.Paths = []string{"."}
+	}
+
+	var versions []string
+	for _, pth := range g.Config.Paths {
+		version, err := g.versionPath(pth)
+		if err != nil {
+			return nil, err
+		}
+
+		versions = append(versions, version)
+	}
+
+	return versions, nil
+}
+
+func (g *Gotagger) versionPath(p string) (string, error) {
+	prefix := g.Config.VersionPrefix
+
+	tags, err := g.repo.Tags(head, prefix)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	// if the tag prefix is an empty string, then we need to filter out
 	// any tags that *have* a prefix
-	if g.Config.VersionPrefix == "" {
+	if prefix == "" {
 		filtered := make([]string, 0, len(tags))
 		for _, tag := range tags {
 			if unicode.IsDigit(rune(tag[0])) {
@@ -546,24 +578,30 @@ func (g *Gotagger) versionsSimple() ([]string, error) {
 	}
 
 	// find the latest tag and its hash
-	latest, hash, err := g.latest(tags)
+	latest, hash, err := g.latest(tags, prefix)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	// find all commits between HEAD and the latest tag
-	commits, err := g.repo.RevList(head, hash)
+	// find all commits between HEAD and the latest tag that touch files under
+	// directory p
+	commits, err := g.repo.RevList(head, hash, p)
 	if err != nil {
-		return nil, fmt.Errorf("could not fetch commits HEAD..%s: %w", hash, err)
+		return "", fmt.Errorf("could not fetch commits HEAD..%s: %w", hash, err)
 	}
+
+	// group the commits by the configured paths
+	// this eliminates commits that only touched files that are
+	// beneath subpaths of p
+	commitsByPath := g.groupCommitsByPath(commits, g.Config.Paths)
 
 	// increment the version
-	version, err := g.incrementVersion(latest, commits)
+	version, err := g.incrementVersion(latest, commitsByPath[p])
 	if err != nil {
-		return nil, fmt.Errorf("could not increment version: %w", err)
+		return "", fmt.Errorf("could not increment version: %w", err)
 	}
 
-	return []string{g.Config.VersionPrefix + version}, nil
+	return prefix + version, nil
 }
 
 type module struct {
@@ -625,15 +663,15 @@ func extractCommitModules(c igit.Commit, modules []module) ([]module, error) {
 	return commitModules, nil
 }
 
-func filterCommitsByModule(mod module, commits []igit.Commit, modules []module, logger logr.Logger) []igit.Commit {
-	logger.Info("filtering commits for module", "module", mod.name)
+func (g *Gotagger) groupCommitsByModule(commits []igit.Commit, modules []module) map[module][]igit.Commit {
+	g.logger.Info("group commits by module")
 
 	// map modules by path for faster lookup
 	modulesByPath := mapModulesByPath(modules)
 
 	grouped := make(map[module][]igit.Commit)
 	for _, commit := range commits {
-		logger = logger.WithValues("commit", commit.Hash)
+		logger := g.logger.WithValues("commit", commit.Hash)
 		for _, change := range commit.Changes {
 			if m, ok := isModuleFile(change.SourceName, modulesByPath); ok {
 				logger.Info("module affected by commit", "module", m.name, "path", change.SourceName)
@@ -651,12 +689,52 @@ func filterCommitsByModule(mod module, commits []igit.Commit, modules []module, 
 		}
 	}
 
-	return grouped[mod]
+	return grouped
+}
+
+func (g *Gotagger) groupCommitsByPath(commits []igit.Commit, paths []string) map[string][]igit.Commit {
+	g.logger.Info("group commits by path")
+
+	// make a map of paths for faster lookup
+	pathsMap := map[string]string{}
+	for _, p := range g.Config.Paths {
+		pathsMap[p] = p
+	}
+
+	grouped := map[string][]igit.Commit{}
+	for _, commit := range commits {
+		logger := g.logger.WithValues("commit", commit.Hash)
+		for _, change := range commit.Changes {
+			if p, ok := isPathFile(change.SourceName, pathsMap); ok {
+				logger.Info("path affected by commit", "path", change.SourceName, "selectedPath", p)
+				grouped[p] = append(grouped[p], commit)
+			}
+
+			if p, ok := isPathFile(change.DestName, pathsMap); ok {
+				logger.Info("path affected by commit", "path", change.DestName, "selectedPath", p)
+				grouped[p] = append(grouped[p], commit)
+			}
+		}
+	}
+
+	return grouped
 }
 
 func isModuleFile(filename string, moduleMap map[string]module) (mod module, ok bool) {
 	for dir := filepath.Dir(filename); ; dir = filepath.Dir(dir) {
 		mod, ok = moduleMap[dir]
+		// break out of the loop if we found a module or hit the root path
+		if ok || dir == rootModulePath {
+			break
+		}
+	}
+
+	return
+}
+
+func isPathFile(filename string, pathMap map[string]string) (p string, ok bool) {
+	for dir := filepath.Dir(filename); ; dir = filepath.Dir(dir) {
+		p, ok = pathMap[dir]
 		// break out of the loop if we found a module or hit the root path
 		if ok || dir == rootModulePath {
 			break

@@ -94,7 +94,7 @@ func TestGotagger_latestModule(t *testing.T) {
 			tags, err := g.repo.Tags("HEAD", tt.module.prefix+"v")
 			require.NoError(t, err)
 
-			if got, _, err := g.latestModule(tt.module, tags); assert.NoError(t, err) {
+			if got, _, err := g.latestModule(tags, tt.module); assert.NoError(t, err) {
 				assert.Equal(t, tt.want, got.Original())
 			}
 		})
@@ -107,9 +107,14 @@ func TestGotagger_ModuleVersion(t *testing.T) {
 
 	simpleGoRepo(t, repo, path)
 
-	if v, err := g.ModuleVersions("foo/sub/module"); assert.NoError(t, err) {
-		assert.Equal(t, []string{"sub/module/v0.1.1"}, v)
+	if got, err := g.ModuleVersions("foo/sub/module"); assert.NoError(t, err) {
+		assert.Equal(t, []string{"sub/module/v0.1.1"}, got)
 	}
+
+	g.Config.Paths = []string{"sub"}
+
+	_, err := g.ModuleVersions()
+	assert.EqualError(t, err, "cannot use path filtering with go modules")
 }
 
 func TestGotagger_ModuleVersions_PreMajor(t *testing.T) {
@@ -1112,6 +1117,44 @@ func TestGotagger_Version_no_module(t *testing.T) {
 	}
 }
 
+func TestGotagger_Version_path_filter(t *testing.T) {
+	g, repo, path, teardown := newGotagger(t)
+	defer teardown()
+
+	g.Config.Paths = []string{"baz"}
+	g.Config.VersionPrefix = "baz/v"
+
+	testutils.SimpleGitRepo(t, repo, path)
+
+	// need to be on the "other" branch
+	w, err := repo.Worktree()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := w.Checkout(&sgit.CheckoutOptions{
+		Branch: plumbing.NewBranchReferenceName("other"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if v, err := g.Version(); assert.NoError(t, err) {
+		assert.Equal(t, "baz/v0.1.0", v)
+	}
+
+	// make a change to baz/
+	testutils.CommitFile(t, repo, path, filepath.Join("baz", "baz.txt"), "fix: baz is broke\n", []byte("some change\n"))
+	if v, err := g.Version(); assert.NoError(t, err) {
+		assert.Equal(t, "baz/v0.1.0", v)
+	}
+
+	// force version
+	testutils.CreateTag(t, repo, path, "baz/v1.0.0")
+	if v, err := g.Version(); assert.NoError(t, err) {
+		assert.Equal(t, "baz/v1.0.0", v)
+	}
+}
+
 func TestGotagger_Version_tag_head(t *testing.T) {
 	g, repo, path, teardown := newGotagger(t)
 	defer teardown()
@@ -1506,12 +1549,13 @@ func Test_filterCommitsByModule(t *testing.T) {
 			commits, err := g.repo.RevList("HEAD", "")
 			require.NoError(t, err)
 
-			commits = filterCommitsByModule(tt.mod, commits, modules, logr.Discard())
+			groupedCommits := g.groupCommitsByModule(commits, modules)
+			gotCommits := groupedCommits[tt.mod]
 
-			// convert to a map of modules to commit subject
-			messages := make([]string, len(commits))
-			for i, commit := range commits {
-				messages[i] = commit.Message()
+			// extract the commit messages to compare
+			var messages []string
+			for _, commit := range gotCommits {
+				messages = append(messages, commit.Message())
 			}
 
 			assert.Equal(t, tt.want, messages)

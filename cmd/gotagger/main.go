@@ -67,6 +67,7 @@ type GoTagger struct {
 	dirtyIncrement string
 	force          bool
 	modules        bool
+	pathFilter     string
 	pushTag        bool
 	remoteName     string
 	showVersion    bool
@@ -83,16 +84,17 @@ func (g *GoTagger) Run() int {
 	flags := flag.NewFlagSet(AppName, flag.ContinueOnError)
 	flags.SetOutput(g.Stderr)
 
+	flags.StringVar(&g.configFile, "config", g.stringEnv("config", defaultConfigFlag), "path to the gotagger configuration file.")
+	flags.StringVar(&g.dirtyIncrement, "dirty", g.stringEnv("dirty", defaultDirtyFlag), "how to increment the version for a dirty checkout [minor, patch, none]")
+	flags.BoolVar(&g.debug, "debug", false, "enable debug output")
 	flags.BoolVar(&g.force, "force", g.boolEnv("force", false), "force creation of a tag")
 	flags.BoolVar(&g.modules, "modules", g.boolEnv("modules", defaultModulesFlag), "enable go module versioning")
+	flags.StringVar(&g.pathFilter, "path", "", "filter commits by path")
 	flags.BoolVar(&g.pushTag, "push", g.boolEnv("push", false), "push the just created tag, implies -release")
 	flags.StringVar(&g.remoteName, "remote", g.stringEnv("remote", defaultRemoteFlag), "name of the remote to push tags to")
 	flags.BoolVar(&g.showVersion, "version", false, "show version information")
 	flags.BoolVar(&g.tagRelease, "release", g.boolEnv("release", false), "tag HEAD with the current version if it is a release commit")
 	flags.StringVar(&g.versionPrefix, "prefix", g.stringEnv("prefix", defaultPrefixFlag), "set a prefix for versions")
-	flags.StringVar(&g.dirtyIncrement, "dirty", g.stringEnv("dirty", defaultDirtyFlag), "how to increment the version for a dirty checkout [minor, patch, none]")
-	flags.StringVar(&g.configFile, "config", g.stringEnv("config", defaultConfigFlag), "path to the gotagger configuration file.")
-	flags.BoolVar(&g.debug, "debug", false, "enable debug output")
 
 	// profiling options
 	cpuprofile := flags.String("cpuprofile", "", "write cpu profile to file")
@@ -164,6 +166,19 @@ func (g *GoTagger) Run() int {
 	if path == "" {
 		path = g.WorkingDir
 	}
+
+	// validate that path filter is a directory in the git repo
+	info, err := os.Stat(filepath.Join(path, g.pathFilter))
+	if err != nil {
+		g.err.Printf("error: invalid path filter %s: %v", g.pathFilter, err)
+		return genericErrorExitCode
+	}
+
+	if !info.IsDir() {
+		g.err.Printf("error: invalid path filter %s: not a directory", g.pathFilter)
+		return genericErrorExitCode
+	}
+
 	r, err := gotagger.New(path)
 	if err != nil {
 		g.err.Println("error:", err)
@@ -191,8 +206,8 @@ func (g *GoTagger) Run() int {
 		}
 	}
 
-	r.Config.Force = g.force
 	r.Config.CreateTag = g.tagRelease || g.pushTag || g.force
+	r.Config.Force = g.force
 	r.Config.PushTag = g.pushTag
 	r.Config.RemoteName = g.remoteName
 
@@ -216,6 +231,9 @@ func (g *GoTagger) Run() int {
 			return genericErrorExitCode
 		}
 		r.Config.DirtyWorktreeIncrement = inc
+	}
+	if g.pathFilter != "" {
+		r.Config.Paths = []string{g.pathFilter}
 	}
 
 	start := time.Now()
@@ -274,9 +292,23 @@ Options:
 `
 	usageSuffix = `
 The current version is determined by finding the commit tagged with highest
-version in the current branch and then determing what type of commits were made
-since that commit. Go submodules can be tagged by including the module name in a
-Modules footer in the release commit message.
+version in the current branch and then determining what type of commits were
+made since that commit by parsing the commit messages using the conventional
+commit standard.
+
+If the -release flag is set and the HEAD commit uses the 'release' type, then
+gotagger will create a tag using the version it calculates. For projects that
+contain multiple go modules, tag specific modules by including them in the
+release commit using the Modules footer:
+
+    release: some submodules
+
+	Modules: github.com/example/repo/module, github.com/example/repo/other/module
+
+The -path flag causes gotagger to filter commit history by paths. This is useful
+for using gotagger with git repositories that contain multiple pieces that
+should be versioned separately. A path filter must exist and must be a
+directory.
 `
 )
 

@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/sassoftware/gotagger/internal/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -181,6 +182,62 @@ func TestGoTagger(t *testing.T) {
 			args:      []string{"-force"},
 			wantOut:   "v1.1.0\n",
 			extraTest: assertTag("v1.1.0"),
+		},
+		{
+			title:   "filter to baz subdirectory",
+			args:    []string{"-path", "baz"},
+			wantOut: "v0.1.0\n",
+			extraSetup: func(t *testing.T, repo *git.Repository, path string) {
+				// need to be on the "other" branch
+				w, err := repo.Worktree()
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if err := w.Checkout(&git.CheckoutOptions{
+					Branch: plumbing.NewBranchReferenceName("other"),
+				}); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+		{
+			title:   "path filter does not exist",
+			args:    []string{"-path", "missing"},
+			wantErr: "error: invalid path filter",
+			wantRc:  1,
+			extraSetup: func(t *testing.T, repo *git.Repository, path string) {
+				// need to be on the "other" branch
+				w, err := repo.Worktree()
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if err := w.Checkout(&git.CheckoutOptions{
+					Branch: plumbing.NewBranchReferenceName("other"),
+				}); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+		{
+			title:   "path filter is a file",
+			args:    []string{"-path", "foo.go"},
+			wantErr: "error: invalid path filter",
+			wantRc:  1,
+			extraSetup: func(t *testing.T, repo *git.Repository, path string) {
+				// need to be on the "other" branch
+				w, err := repo.Worktree()
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if err := w.Checkout(&git.CheckoutOptions{
+					Branch: plumbing.NewBranchReferenceName("other"),
+				}); err != nil {
+					t.Fatal(err)
+				}
+			},
 		},
 	}
 

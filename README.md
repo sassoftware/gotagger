@@ -18,6 +18,7 @@
     - [Pre-Release Incrementing](#pre-release-incrementing)
     - [Version Prefix](#version-prefix)
   - [Go Module Support](#go-module-support)
+  - [Path Filtering](#path-filtering)
 - [Using gotagger as a library](#using-gotagger-as-a-library)
 - [Contributing](#contributing)
 - [License](#license)
@@ -260,6 +261,16 @@ Modules: foo, foo/bar
 `gotagger` will print out all of the versions it tagged
 in the order they are specified in the `Modules` footer.
 
+### Path Filtering
+
+`gotagger` supports versioning individual paths
+within a git repository using a path filter.
+Currently,
+only a single path filter is supported,
+and `gotagger` will return an error
+if a path filter is used in a repository
+that contains go modules
+without setting `-modules=false`.
 
 ## Using gotagger as a library
 
