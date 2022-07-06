@@ -51,8 +51,13 @@ type Config struct {
 	// CommitTypeTable used for looking up version increments based on the commit type.
 	CommitTypeTable mapper.Table
 
-	// Force controlls whether gotagger will create a tag even if HEAD is not a "release" commit.
+	// Force controls whether gotagger will create a tag even if HEAD is not a "release" commit.
 	Force bool
+
+	// Paths is a list of sub-paths within the repo to restrict the git
+	// history used to calculate a version. The versions returned will be
+	// prefixed with their path.
+	Paths []string
 
 	/* TODO
 	// PreRelease is the string that will be used to generate pre-release versions. The
@@ -150,8 +155,8 @@ func (c *Config) ParseJSON(data []byte) error {
 //		v
 func NewDefaultConfig() Config {
 	return Config{
+		CommitTypeTable: mapper.NewTable(nil, mapper.IncrementPatch),
 		RemoteName:      "origin",
 		VersionPrefix:   "v",
-		CommitTypeTable: mapper.NewTable(nil, mapper.IncrementPatch),
 	}
 }
