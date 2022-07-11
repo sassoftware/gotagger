@@ -31,12 +31,12 @@ repos:
         exclude: >-
           ^(docs/arch/adr-template\.md|\.github/ISSUE_TEMPLATE/|\.stentor\.d/)
   - repo: https://github.com/adrienverge/yamllint
-    rev: v1.26.3
+    rev: v1.27.1
     hooks:
       - id: yamllint
         exclude: ^(.github/workflows/)
   - repo: https://github.com/rhysd/actionlint
-    rev: v1.6.13
+    rev: v1.6.15
     hooks:
       - id: actionlint
   - repo: https://github.com/golangci/golangci-lint
