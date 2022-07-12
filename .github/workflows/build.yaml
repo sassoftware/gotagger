@@ -52,3 +52,30 @@ jobs:
 
       - name: Test
         run: make test
+
+  validate-release:
+    name: Validate release commits
+    if: "startsWith(github.event.head_commit.message, 'release: ')"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@b22fbbc2921299758641fab08929b4ac52b32923
+        with:
+          go-version: 1.17
+        id: go
+
+      - name: Determine cache locations
+        id: go-cache-paths
+        run: |
+          echo "::set-output name=go-build::$(go env GOCACHE)"
+          echo "::set-output name=go-mod::$(go env GOMODCACHE)"
+
+      - name: Check out code
+        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+        with:
+          fetch-depth: 0
+
+      - name: Tag commit
+        run: |
+          make build/linux/gotagger
+          build/linux/gotagger
