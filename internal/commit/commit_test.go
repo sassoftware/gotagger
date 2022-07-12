@@ -48,7 +48,7 @@ func TestCommit_Message(t *testing.T) {
 func TestParse(t *testing.T) {
 	rapid.Check(t, func(t *rapid.T) {
 		ctype := rapid.StringMatching(`^\w*$`).Draw(t, "type").(string)
-		scope := rapid.StringMatching(`^\w*$`).Draw(t, "scope").(string)
+		scope := rapid.StringMatching(`[\w$.\-*/ ]*`).Draw(t, "scope").(string)
 		isBreaking := rapid.Bool().Draw(t, "breaking").(bool)
 		subject := rapid.StringMatching(`^.*$`).Draw(t, "subject").(string)
 		body := rapid.SliceOf(
