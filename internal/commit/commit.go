@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	typeRe   = regexp.MustCompile(`^(?P<type>\w+)(?P<scope>\(\w+\))?(?P<breaking>!)?: (?P<subject>.+)`)
+	typeRe   = regexp.MustCompile(`^(?P<type>\w+)(?:\((?P<scope>[-\w$.*/ ]+)\))?(?P<breaking>!)?: (?P<subject>.+)$`)
 	mergeRe  = regexp.MustCompile(`^Merge "(.*)"$`)
 	revertRe = regexp.MustCompile(`^Revert\s"([\s\S]+)"\s*This reverts commit (\w+)\.`)
 	footerRe = regexp.MustCompile(`^(?P<title>[-\w ]+): (?P<text>.*)`)
