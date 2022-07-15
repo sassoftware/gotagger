@@ -674,20 +674,27 @@ func (g *Gotagger) groupCommitsByModule(commits []igit.Commit, modules []module)
 	// map modules by path for faster lookup
 	modulesByPath := mapModulesByPath(modules)
 
-	grouped := make(map[module][]igit.Commit)
+	grouped := map[module][]igit.Commit{}
 	for _, commit := range commits {
 		logger := g.logger.WithValues("commit", commit.Hash)
+		mappedModules := map[module]struct{}{}
 		for _, change := range commit.Changes {
 			if m, ok := isModuleFile(change.SourceName, modulesByPath); ok {
 				logger.Info("module affected by commit", "module", m.name, "path", change.SourceName)
-				grouped[m] = append(grouped[m], commit)
+				if _, mapped := mappedModules[m]; !mapped {
+					grouped[m] = append(grouped[m], commit)
+					mappedModules[m] = struct{}{}
+				}
 				continue
 			}
 			// check if the dest name touched this module
 			if change.DestName != "" {
 				if m, ok := isModuleFile(change.DestName, modulesByPath); ok {
 					logger.Info("module affected by commit", "module", m.name, "path", change.DestName)
-					grouped[m] = append(grouped[m], commit)
+					if _, mapped := mappedModules[m]; !mapped {
+						grouped[m] = append(grouped[m], commit)
+						mappedModules[m] = struct{}{}
+					}
 					continue
 				}
 			}
