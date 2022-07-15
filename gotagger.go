@@ -16,10 +16,8 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
-	ggit "github.com/sassoftware/gotagger/git"
-	igit "github.com/sassoftware/gotagger/internal/git"
+	"github.com/sassoftware/gotagger/internal/git"
 	"github.com/sassoftware/gotagger/mapper"
-	"github.com/sassoftware/gotagger/marker"
 	"golang.org/x/mod/modfile"
 )
 
@@ -39,12 +37,12 @@ var (
 type Gotagger struct {
 	Config Config
 
-	repo   *igit.Repository
+	repo   *git.Repository
 	logger logr.Logger
 }
 
 func New(path string) (*Gotagger, error) {
-	r, err := igit.New(path)
+	r, err := git.New(path)
 	if err != nil {
 		return nil, err
 	}
@@ -295,7 +293,7 @@ func (g *Gotagger) findAllModules(include []string) (modules []module, err error
 	return
 }
 
-func (g *Gotagger) incrementVersion(v *semver.Version, commits []igit.Commit) (string, error) {
+func (g *Gotagger) incrementVersion(v *semver.Version, commits []git.Commit) (string, error) {
 
 	// If this is the latest tagged commit, then return
 	if len(commits) > 0 {
@@ -401,7 +399,7 @@ func (g *Gotagger) latestModule(tags []string, m module) (*semver.Version, strin
 	return latestVersion, hash, nil
 }
 
-func (g *Gotagger) parseCommits(cs []igit.Commit, v *semver.Version) (vinc mapper.Increment) {
+func (g *Gotagger) parseCommits(cs []git.Commit, v *semver.Version) (vinc mapper.Increment) {
 	g.logger.Info("determining version increment from commits")
 
 	for _, c := range cs {
@@ -438,7 +436,7 @@ func (g *Gotagger) parseCommits(cs []igit.Commit, v *semver.Version) (vinc mappe
 	return vinc
 }
 
-func (g *Gotagger) validateCommit(c igit.Commit, modules []module, commitModules []module) error {
+func (g *Gotagger) validateCommit(c git.Commit, modules []module, commitModules []module) error {
 	logger := g.logger.WithValues("commit", c.Hash)
 
 	// if no modules were found, then skip validation
@@ -630,7 +628,7 @@ func (s sortByPath) Less(i, j int) bool {
 
 // extractCommitModules returns the modules referenced in the commit Footer(s).
 // If there are no modules referenced, then this returns the root module.
-func extractCommitModules(c igit.Commit, modules []module) ([]module, error) {
+func extractCommitModules(c git.Commit, modules []module) ([]module, error) {
 	// map module name to module for faster lookup
 	moduleNameMap := map[string]module{}
 	for _, m := range modules {
@@ -668,13 +666,13 @@ func extractCommitModules(c igit.Commit, modules []module) ([]module, error) {
 	return commitModules, nil
 }
 
-func (g *Gotagger) groupCommitsByModule(commits []igit.Commit, modules []module) map[module][]igit.Commit {
+func (g *Gotagger) groupCommitsByModule(commits []git.Commit, modules []module) map[module][]git.Commit {
 	g.logger.Info("group commits by module")
 
 	// map modules by path for faster lookup
 	modulesByPath := mapModulesByPath(modules)
 
-	grouped := map[module][]igit.Commit{}
+	grouped := map[module][]git.Commit{}
 	for _, commit := range commits {
 		logger := g.logger.WithValues("commit", commit.Hash)
 		mappedModules := map[module]struct{}{}
@@ -704,7 +702,7 @@ func (g *Gotagger) groupCommitsByModule(commits []igit.Commit, modules []module)
 	return grouped
 }
 
-func (g *Gotagger) groupCommitsByPath(commits []igit.Commit, paths []string) map[string][]igit.Commit {
+func (g *Gotagger) groupCommitsByPath(commits []git.Commit, paths []string) map[string][]git.Commit {
 	g.logger.Info("group commits by path")
 
 	// make a map of paths for faster lookup
@@ -713,7 +711,7 @@ func (g *Gotagger) groupCommitsByPath(commits []igit.Commit, paths []string) map
 		pathsMap[p] = p
 	}
 
-	grouped := map[string][]igit.Commit{}
+	grouped := map[string][]git.Commit{}
 	for _, commit := range commits {
 		logger := g.logger.WithValues("commit", commit.Hash)
 		for _, change := range commit.Changes {
@@ -827,105 +825,4 @@ func validateCommitModules(commitModules, changedModules []module) (err error) {
 	}
 
 	return
-}
-
-// Deprecated: TagRepo determines what the curent version of the repository is by parsing the commit
-// history since previous release and returns that version. Depending on the state of
-// the Config passed it, it may also create the tag and push it.
-//
-// This function will be removed before the v1.0.0 release of gotagger.
-func TagRepo(cfg *Config, r ggit.Repo) (*semver.Version, error) {
-	// Find the latest semver and the commit hash it references.
-	latest, commitHash, err := getLatest(r, cfg.VersionPrefix)
-	if err != nil {
-		return nil, err
-	}
-
-	// Find the most significant marker between HEAD and the latest tagged commit.
-	commits, err := r.RevList(head, commitHash)
-	if err != nil {
-		return nil, fmt.Errorf("could not fetch commits HEAD..%s: %s", commitHash, err)
-	}
-
-	// If HEAD is already tagged, just display the latest version
-	if len(commits) == 0 {
-		return latest, nil
-	}
-
-	changeType, isBreaking := scanForMarkers(commits)
-	switch {
-	case isBreaking:
-		*latest = latest.IncMajor()
-	case changeType == marker.Feature:
-		*latest = latest.IncMinor()
-	default:
-		*latest = latest.IncPatch()
-	}
-	if len(commits) > 0 {
-		c := commits[0]
-		if (cfg.CreateTag || cfg.PushTag) && isRelease(c) && !alreadyTagged(latest, c) {
-			if err := r.CreateTag(c.Hash, latest, cfg.VersionPrefix, "", false); err != nil {
-				return nil, fmt.Errorf("could not tag HEAD (%s): %s", c.Hash, err)
-			}
-			if cfg.PushTag {
-				// TODO: add option to set name of remote
-				if err := r.PushTag(latest, "origin"); err != nil {
-					return nil, fmt.Errorf("could not push tag (%s): %s", latest, err)
-				}
-			}
-		}
-	}
-	return latest, nil
-}
-
-func alreadyTagged(v *semver.Version, c ggit.Commit) bool {
-	for _, t := range c.Tags {
-		if v.Equal(t) {
-			return true
-		}
-	}
-	return false
-}
-
-func isRelease(c ggit.Commit) bool {
-	m, _, _ := marker.Parse(c.Subject)
-	return m == marker.Release
-}
-
-func getLatest(r ggit.Repo, prefix string) (latest *semver.Version, hash string, err error) {
-	taggedCommits, err := r.Tags(prefix)
-	if err != nil {
-		return latest, hash, err
-	}
-	latest = new(semver.Version)
-	for _, commit := range taggedCommits {
-		if len(commit.Tags) > 0 {
-			if latest.LessThan(commit.Tags[0]) {
-				latest = commit.Tags[0]
-				hash = commit.Hash
-			}
-		}
-	}
-	return latest, hash, nil
-}
-
-func scanForMarkers(commits []ggit.Commit) (mark marker.Marker, isBreaking bool) {
-	if len(commits) != 0 {
-		for _, c := range commits {
-			m, _, b := marker.Parse(c.Subject)
-			switch m {
-			case marker.Feature:
-				mark = m
-			case marker.Fix:
-				if mark != marker.Feature {
-					mark = m
-				}
-			}
-			// if we already saw a breaking change, we can stop checking
-			if !isBreaking && (b || marker.IsBreaking(c.Trailers)) {
-				isBreaking = true
-			}
-		}
-	}
-	return mark, isBreaking
 }
