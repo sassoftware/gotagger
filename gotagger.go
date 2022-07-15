@@ -387,6 +387,11 @@ func (g *Gotagger) latestModule(tags []string, m module) (*semver.Version, strin
 		}
 	}
 
+	// if there were no tags, then return 0.0.0
+	if latestVersion == nil {
+		return semver.MustParse("0.0.0"), "", nil
+	}
+
 	hash, err := g.repo.RevParse(latestTag + "^{commit}")
 	if err != nil {
 		return nil, "", err

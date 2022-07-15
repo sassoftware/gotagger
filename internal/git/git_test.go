@@ -362,6 +362,20 @@ func TestTags(t *testing.T) {
 	}
 }
 
+func TestTags_no_tags(t *testing.T) {
+	repo, path, teardown := testutils.NewGitRepo(t)
+	defer teardown()
+
+	testutils.CommitFile(t, repo, path, "foo.txt", "chore: adding a foo", []byte("foo\n"))
+
+	r, err := New(path)
+	require.NoError(t, err)
+
+	if got, err := r.Tags("HEAD"); assert.NoError(t, err) {
+		assert.Empty(t, got)
+	}
+}
+
 func TestTags_prefixes(t *testing.T) {
 	repo, path, teardown := testutils.NewGitRepo(t)
 	defer teardown()

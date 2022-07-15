@@ -223,7 +223,10 @@ func (r *Repository) Tags(rev string, prefixes ...string) (tags []string, err er
 	}
 
 	out = strings.TrimSpace(out)
-	tags = strings.Split(string(out), "\n")
+	if out != "" {
+		// no tags found
+		tags = strings.Split(string(out), "\n")
+	}
 
 	return
 }
