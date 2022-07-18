@@ -82,17 +82,26 @@ func TestHead(t *testing.T) {
 	testutils.SimpleGitRepo(t, repo, path)
 
 	r, err := New(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	c, err := r.Head()
-	if err != nil {
-		t.Errorf("Head() returned an error: %v", err)
+	if c, err := r.Head(); assert.NoError(t, err, "Head() returned an error") {
+		got, want := c.Message(), "feat: bar\n\nThis is a great bar."
+		assert.Equal(t, want, got)
 	}
+}
 
-	if got, want := c.Message(), "feat: bar\n\nThis is a great bar."; got != want {
-		t.Errorf("Head() returned %q, want %q", got, want)
+func TestHead_one_commit(t *testing.T) {
+	repo, path, teardown := testutils.NewGitRepo(t)
+	defer teardown()
+
+	testutils.CommitFile(t, repo, path, "foo.txt", "chore: initial commit", []byte("foo\n"))
+
+	r, err := New(path)
+	require.NoError(t, err)
+
+	if c, err := r.Head(); assert.NoError(t, err, "Head() returned an error") {
+		got, want := c.Message(), "chore: initial commit"
+		assert.Equal(t, want, got)
 	}
 }
 
@@ -359,6 +368,20 @@ func TestTags(t *testing.T) {
 		t.Errorf("Tags returned %d tags, want %d", got, want)
 	} else if got, want := tags[0], "v1.0.0"; got != want {
 		t.Errorf("Tags returned %s, want %s", got, want)
+	}
+}
+
+func TestTags_no_tags(t *testing.T) {
+	repo, path, teardown := testutils.NewGitRepo(t)
+	defer teardown()
+
+	testutils.CommitFile(t, repo, path, "foo.txt", "chore: adding a foo", []byte("foo\n"))
+
+	r, err := New(path)
+	require.NoError(t, err)
+
+	if got, err := r.Tags("HEAD"); assert.NoError(t, err) {
+		assert.Empty(t, got)
 	}
 }
 

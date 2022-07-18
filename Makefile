@@ -4,7 +4,6 @@ GOBUILD     = $(GO) build
 GOCOV       = $(TOOLBIN)/gocov
 GOCOVXML    = $(TOOLBIN)/gocov-xml
 GOINSTALL  := GOOS= GOARCH= $(GO) install
-GORELEASER  = $(TOOLBIN)/goreleaser
 LINTER      = $(TOOLBIN)/golangci-lint
 STENTOR     = $(TOOLBIN)/stentor
 TESTER      = $(TOOLBIN)/gotestsum
@@ -35,13 +34,9 @@ TESTFORMAT  = short
 TIMEOUT     = 60s
 
 # conditional flags
-ifeq ($(RELEASE_DRY_RUN),false)
-TAGFLAGS     = -release -push
-RELEASEFLAGS =
+ifeq ($(DRY_RUN),false)
 STENTORFLAGS = -release
 else
-TAGFLAGS     =
-RELEASEFLAGS = --snapshot --skip-publish --rm-dist
 STENTORFLAGS =
 endif
 
@@ -78,14 +73,6 @@ format: lint
 lint: | $(LINTER)
 	$(LINTER) run $(LINTFLAGS)
 
-.PHONY: release
-release: build | $(GORELEASER)
-	$(TARGET) $(TAGFLAGS)
-	BUILDDATE=$(BUILDDATE) \
-	COMMIT=$(COMMIT) \
-	VERSION=$(VERSION) \
-	$(GORELEASER) $(RELEASEFLAGS)
-
 .PHONY: report
 report: TESTFLAGS := $(REPORTFLAGS) $(TESTFLAGS)
 report: test | $(GOCOV) $(GOCOVXML)
@@ -114,7 +101,6 @@ endef
 # tool targets
 $(eval $(call installtool,$(GOCOV),github.com/axw/gocov/gocov))
 $(eval $(call installtool,$(GOCOVXML),github.com/AlekSi/gocov-xml))
-$(eval $(call installtool,$(GORELEASER),github.com/goreleaser/goreleaser))
 $(eval $(call installtool,$(LINTER),github.com/golangci/golangci-lint/cmd/golangci-lint))
 $(eval $(call installtool,$(STENTOR),github.com/wfscheper/stentor/cmd/stentor))
 $(eval $(call installtool,$(TESTER),gotest.tools/gotestsum))

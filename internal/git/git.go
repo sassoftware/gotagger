@@ -114,14 +114,16 @@ func (r *Repository) DeleteTags(tags []string) error {
 }
 
 // Head returns the commit at HEAD
-func (r *Repository) Head() (Commit, error) {
+func (r *Repository) Head() (c Commit, err error) {
 	r.logger.V(1).Info("getting HEAD commit")
-	commits, err := r.RevList("HEAD", "HEAD^")
+	out, err := r.run([]string{"show", "--format=raw", "--raw", "--no-abbrev", "HEAD"})
 	if err != nil {
 		return Commit{}, err
 	}
 
-	return commits[0], nil
+	out = strings.TrimSpace(out)
+
+	return parseCommit(out), nil
 }
 
 // IsDirty returns a boolean indicating whether there are uncommited changes.
@@ -223,7 +225,10 @@ func (r *Repository) Tags(rev string, prefixes ...string) (tags []string, err er
 	}
 
 	out = strings.TrimSpace(out)
-	tags = strings.Split(string(out), "\n")
+	if out != "" {
+		// no tags found
+		tags = strings.Split(string(out), "\n")
+	}
 
 	return
 }
@@ -285,37 +290,39 @@ func parseChanges(lines []string) []Change {
 	return changes
 }
 
-func parseCommits(data string) (commits []Commit) {
-	// strip the first 'commit '
+func parseCommit(data string) Commit {
+	// strip the leading 'commit '
 	data = strings.TrimPrefix(data, "commit ")
 
-	// split on \n^commits to separate the raw output into raw commits
+	// separate headers from message and changes
+	parts := strings.Split(data, "\n\n")
+	headers, message := parts[0], parts[1]
+
+	var changes []Change
+	if len(parts) > 2 {
+		rawChanges := strings.TrimSpace(parts[2])
+		if rawChanges != "" {
+			changes = parseChanges(strings.Split(rawChanges, "\n"))
+		}
+	}
+
+	// trim the leading four spaces from the commit message lines
+	message = strings.TrimSpace(message)
+	message = strings.ReplaceAll(message, "\n    ", "\n")
+
+	// parse the commit message
+	return Commit{
+		Commit:  commit.Parse(message),
+		Hash:    strings.Split(headers, "\n")[0],
+		Changes: changes,
+	}
+}
+
+func parseCommits(data string) (commits []Commit) {
+	// split on \ncommit to separate the raw output into raw commits
 	rawCommits := strings.Split(data, "\ncommit ")
 	for _, rawCommit := range rawCommits {
-		// separate headers from message and changes
-		parts := strings.Split(rawCommit, "\n\n")
-		headers, message := parts[0], parts[1]
-
-		var changes []Change
-		if len(parts) > 2 {
-			rawChanges := strings.TrimSpace(parts[2])
-			if rawChanges != "" {
-				changes = parseChanges(strings.Split(rawChanges, "\n"))
-			}
-		}
-
-		// trim the leading four spaces from the commit message lines
-		message = strings.TrimSpace(message)
-		message = strings.ReplaceAll(message, "\n    ", "\n")
-
-		// parse the commit message
-		commit := Commit{
-			Commit:  commit.Parse(message),
-			Hash:    strings.Split(headers, "\n")[0],
-			Changes: changes,
-		}
-
-		commits = append(commits, commit)
+		commits = append(commits, parseCommit(rawCommit))
 	}
 
 	return
