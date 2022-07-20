@@ -3,7 +3,7 @@
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 - [Changelog](#changelog)
-  - [[v0.9.0] - 2022-07-18](#v090---2022-07-18)
+  - [[v0.9.0] - 2022-07-20](#v090---2022-07-20)
     - [Removed](#removed)
     - [Added](#added)
     - [Fixed](#fixed)
@@ -60,7 +60,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- stentor output starts -->
-## [v0.9.0] - 2022-07-18
+## [v0.9.0] - 2022-07-20
 
 ### Removed
 
