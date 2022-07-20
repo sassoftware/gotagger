@@ -28,6 +28,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Configure git
+        env:
+          AUTHOR_EMAIL: ${{ github.event.head_commit.author.email }}
+          AUTHOR_NAME: ${{ github.event.head_commit.author.name }}
+        run: |
+          git config --local user.email "${AUTHOR_EMAIL}"
+          git config --local user.name "${AUTHOR_NAME}"
+
       - name: Tag commit
         run: |
           make build
