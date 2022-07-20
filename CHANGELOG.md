@@ -8,6 +8,7 @@
     - [Added](#added)
     - [Fixed](#fixed)
     - [Chores](#chores)
+    - [CI](#ci)
   - [[v0.8.0] - 2022-03-11](#v080---2022-03-11)
     - [Added](#added-1)
   - [[v0.7.0] - 2021-12-08](#v070---2021-12-08)
@@ -16,7 +17,7 @@
     - [Fixed](#fixed-1)
   - [[v0.6.2] - 2021-07-09](#v062---2021-07-09)
     - [Fixed](#fixed-2)
-    - [CI](#ci)
+    - [CI](#ci-1)
   - [[v0.6.1] - 2021-02-16](#v061---2021-02-16)
     - [Fixed](#fixed-3)
   - [[v0.6.0] - 2020/10/12](#v060---20201012)
@@ -119,6 +120,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   but this time the benefits are worth the potential disruption.
   [#54](https://github.com/sassoftware/gotagger/issues/54)
 
+### CI
+
+- Set the git author name and email when generating tags.
 
 [v0.9.0]: https://github.com/sassoftware/gotagger/compare/v0.8.0...v0.9.0
 
