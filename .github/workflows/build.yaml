@@ -33,13 +33,13 @@ jobs:
           fetch-depth: 0
 
       - name: Go Build Cache
-        uses: actions/cache@0865c47f36e68161719c5b124609996bb5c40129
+        uses: actions/cache@f4278025ab0f432ce369118909e46deec636f50c
         with:
           path: ${{ steps.go-cache-paths.outputs.go-build }}
           key: ${{ matrix.os }}-go-${{ matrix.go_version }}-build-${{ hashFiles('**/go.sum') }}
 
       - name: Go Module Cache
-        uses: actions/cache@0865c47f36e68161719c5b124609996bb5c40129
+        uses: actions/cache@f4278025ab0f432ce369118909e46deec636f50c
         with:
           path: ${{ steps.go-cache-paths.outputs.go-mod }}
           key: ${{ matrix.os }}-go-${{ matrix.go_version }}-mod-${{ hashFiles('**/go.sum') }}
