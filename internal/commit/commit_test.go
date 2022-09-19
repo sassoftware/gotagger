@@ -47,17 +47,15 @@ func TestCommit_Message(t *testing.T) {
 
 func TestParse(t *testing.T) {
 	rapid.Check(t, func(t *rapid.T) {
-		ctype := rapid.StringMatching(`^\w*$`).Draw(t, "type").(string)
-		scope := rapid.StringMatching(`[\w$.\-*/ ]*`).Draw(t, "scope").(string)
-		isBreaking := rapid.Bool().Draw(t, "breaking").(bool)
-		subject := rapid.StringMatching(`^.*$`).Draw(t, "subject").(string)
-		body := rapid.SliceOf(
+		ctype := rapid.StringMatching(`^\w*$`).Draw(t, "type")
+		scope := rapid.StringMatching(`[\w$.\-*/ ]*`).Draw(t, "scope")
+		isBreaking := rapid.Bool().Draw(t, "breaking")
+		subject := rapid.StringMatching(`^.*$`).Draw(t, "subject")
+		body := rapid.Transform[[]string, string](rapid.SliceOf(
 			rapid.String().Filter(func(s string) bool { return !strings.Contains(s, ": ") }),
-		).
-			Map(func(s []string) string {
-				return strings.Join(s, "\n")
-			}).
-			Draw(t, "body").(string)
+		), func(s []string) string {
+			return strings.Join(s, "\n")
+		}).Draw(t, "body")
 
 		header := ctype
 		if scope != "" {
@@ -91,7 +89,7 @@ func TestParse(t *testing.T) {
 
 func TestParse_empty(t *testing.T) {
 	rapid.Check(t, func(t *rapid.T) {
-		input := rapid.StringMatching(`^\s*`).Draw(t, "input").(string)
+		input := rapid.StringMatching(`^\s*`).Draw(t, "input")
 		got := Parse(input)
 		assert.Equal(t, Commit{}, got)
 	})
@@ -99,17 +97,18 @@ func TestParse_empty(t *testing.T) {
 
 func TestParse_merge(t *testing.T) {
 	rapid.Check(t, func(t *rapid.T) {
-		ctype := rapid.StringMatching(`^\w+$`).Draw(t, "type").(string)
-		scope := rapid.StringMatching(`^\w*$`).Draw(t, "scope").(string)
-		isBreaking := rapid.Bool().Draw(t, "breaking").(bool)
-		subject := rapid.StringMatching(`^.+$`).Draw(t, "subject").(string)
-		body := rapid.SliceOf(
-			rapid.String().Filter(func(s string) bool { return !strings.Contains(s, ": ") }),
-		).
-			Map(func(s []string) string {
+		ctype := rapid.StringMatching(`^\w+$`).Draw(t, "type")
+		scope := rapid.StringMatching(`^\w*$`).Draw(t, "scope")
+		isBreaking := rapid.Bool().Draw(t, "breaking")
+		subject := rapid.StringMatching(`^.+$`).Draw(t, "subject")
+		body := rapid.Transform[[]string, string](
+			rapid.SliceOf(
+				rapid.String().Filter(func(s string) bool { return !strings.Contains(s, ": ") }),
+			),
+			func(s []string) string {
 				return strings.Join(s, "\n")
-			}).
-			Draw(t, "body").(string)
+			},
+		).Draw(t, "body")
 
 		header := ctype
 		if scope != "" {
@@ -138,11 +137,11 @@ func TestParse_merge(t *testing.T) {
 
 func TestParse_revert(t *testing.T) {
 	rapid.Check(t, func(t *rapid.T) {
-		ctype := rapid.StringMatching(`^\w+$`).Draw(t, "type").(string)
-		scope := rapid.StringMatching(`^\w*$`).Draw(t, "scope").(string)
-		isBreaking := rapid.Bool().Draw(t, "breaking").(bool)
-		subject := rapid.StringMatching(`^.+$`).Draw(t, "subject").(string)
-		hash := rapid.StringMatching(`^\w*$`).Draw(t, "hash").(string)
+		ctype := rapid.StringMatching(`^\w+$`).Draw(t, "type")
+		scope := rapid.StringMatching(`^\w*$`).Draw(t, "scope")
+		isBreaking := rapid.Bool().Draw(t, "breaking")
+		subject := rapid.StringMatching(`^.+$`).Draw(t, "subject")
+		hash := rapid.StringMatching(`^\w*$`).Draw(t, "hash")
 
 		header := ctype
 		if scope != "" {
@@ -177,7 +176,7 @@ func TestParse_revert(t *testing.T) {
 func TestParse_arbitrary(t *testing.T) {
 	want := Commit{}
 	rapid.Check(t, func(t *rapid.T) {
-		input := rapid.String().Draw(t, "input").(string)
+		input := rapid.String().Draw(t, "input")
 		got := Parse(input)
 		assert.Equal(t, want, got)
 	})
@@ -191,28 +190,34 @@ func TestParse_footer(t *testing.T) {
 			`^([bB][rR][eE][aA][kK][iI][nN][gG](-| )[cC][hH][aA][nN][gG][eE])?$`,
 		).Draw(
 			t, "bFooterTitle",
-		).(string)
-		bFooterText := rapid.
-			SliceOf(rapid.String().Filter(func(s string) bool {
-				if bFooterTitle != "" {
-					return s != "" && !strings.Contains(s, ": ")
-				}
+		)
+		bFooterText := rapid.Transform[[]string, string](
+			rapid.SliceOf(
+				rapid.
+					String().
+					Filter(func(s string) bool {
+						if bFooterTitle != "" {
+							return s != "" && !strings.Contains(s, ": ")
+						}
 
-				return false
-			})).
-			Map(func(s []string) string { return strings.Join(s, "\n") }).
-			Draw(t, "bFooterText").(string)
-		footerTitle := rapid.StringMatching(`^([[:alnum:]][-\w ]*)?`).Draw(t, "footerTitle").(string)
-		footerText := rapid.
-			SliceOf(rapid.String().Filter(func(s string) bool {
-				if footerTitle != "" {
-					return s != "" && !strings.Contains(s, ": ")
-				}
+						return false
+					})),
+			func(s []string) string { return strings.Join(s, "\n") },
+		).Draw(t, "bFooterText")
+		footerTitle := rapid.StringMatching(`^([[:alnum:]][-\w ]*)?`).Draw(t, "footerTitle")
+		footerText := rapid.Transform[[]string, string](
+			rapid.SliceOf(
+				rapid.
+					String().
+					Filter(func(s string) bool {
+						if footerTitle != "" {
+							return s != "" && !strings.Contains(s, ": ")
+						}
 
-				return false
-			})).
-			Map(func(s []string) string { return strings.Join(s, "\n") }).
-			Draw(t, "footerText").(string)
+						return false
+					})),
+			func(s []string) string { return strings.Join(s, "\n") },
+		).Draw(t, "footerText")
 		input := header + "\n\n" + body + "\n\n" + bFooterTitle + ": " + bFooterText
 		if footerTitle != "" {
 			input += "\n" + footerTitle + ": " + footerText
@@ -261,8 +266,8 @@ func Test_parseMessageBody(t *testing.T) {
 	rapid.Check(t, func(t *rapid.T) {
 		footerTitle := rapid.StringMatching(
 			`^[bB][rR][eE][aA][kK][iI][nN][gG]-[cC][hH][aA][nN][gG][eE]`,
-		).Draw(t, "footerTitle").(string)
-		footerText := rapid.String().Draw(t, "footerText").(string)
+		).Draw(t, "footerTitle")
+		footerText := rapid.String().Draw(t, "footerText")
 		inputBody := "Some text"
 		input := inputBody + "\n\n" + footerTitle + ": " + footerText
 
