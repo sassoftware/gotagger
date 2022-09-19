@@ -11,7 +11,7 @@ require (
 	github.com/rs/zerolog v1.27.0
 	github.com/stretchr/testify v1.8.0
 	golang.org/x/mod v0.5.1
-	pgregory.net/rapid v0.4.8
+	pgregory.net/rapid v0.5.3
 )
 
 require (
