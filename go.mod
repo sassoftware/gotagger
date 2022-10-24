@@ -9,7 +9,7 @@ require (
 	github.com/go-logr/zerologr v1.2.2
 	github.com/google/go-cmp v0.4.0 // indirect
 	github.com/rs/zerolog v1.28.0
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.1
 	golang.org/x/mod v0.5.1
 	pgregory.net/rapid v0.5.3
 )
