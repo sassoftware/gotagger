@@ -12,8 +12,7 @@ import (
 )
 
 func TestWindowsPaths(t *testing.T) {
-	repo, path, teardown := testutils.NewGitRepo(t)
-	defer teardown()
+	repo, path := testutils.NewGitRepo(t)
 
 	// ensure / in path
 	path = filepath.ToSlash(path)
