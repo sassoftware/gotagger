@@ -5,7 +5,6 @@ package git
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -18,8 +17,7 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	repo, path, teardown := testutils.NewGitRepo(t)
-	defer teardown()
+	repo, path := testutils.NewGitRepo(t)
 
 	testutils.SimpleGitRepo(t, repo, path)
 
@@ -29,12 +27,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestNew_no_repo(t *testing.T) {
-	dir, err := ioutil.TempDir("", "gotagger")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { os.RemoveAll(dir) }()
-
+	dir := t.TempDir()
 	if _, err := New(dir); err == nil {
 		t.Errorf("New(%q) did not return an error.", dir)
 	}
@@ -76,8 +69,7 @@ func TestCreateTag(t *testing.T) {
 }
 
 func TestHead(t *testing.T) {
-	repo, path, teardown := testutils.NewGitRepo(t)
-	defer teardown()
+	repo, path := testutils.NewGitRepo(t)
 
 	testutils.SimpleGitRepo(t, repo, path)
 
@@ -91,8 +83,7 @@ func TestHead(t *testing.T) {
 }
 
 func TestHead_one_commit(t *testing.T) {
-	repo, path, teardown := testutils.NewGitRepo(t)
-	defer teardown()
+	repo, path := testutils.NewGitRepo(t)
 
 	testutils.CommitFile(t, repo, path, "foo.txt", "chore: initial commit", []byte("foo\n"))
 
@@ -109,8 +100,7 @@ func TestIsDirty(t *testing.T) {
 	t.Parallel()
 
 	t.Run("clean chekcout", func(t *testing.T) {
-		repo, path, teardown := testutils.NewGitRepo(t)
-		defer teardown()
+		repo, path := testutils.NewGitRepo(t)
 
 		testutils.SimpleGitRepo(t, repo, path)
 
@@ -123,14 +113,13 @@ func TestIsDirty(t *testing.T) {
 	})
 
 	t.Run("untracked file", func(t *testing.T) {
-		repo, path, teardown := testutils.NewGitRepo(t)
-		defer teardown()
+		repo, path := testutils.NewGitRepo(t)
 
 		testutils.SimpleGitRepo(t, repo, path)
 
 		r, err := New(path)
 		require.NoError(t, err)
-		require.NoError(t, ioutil.WriteFile(filepath.Join(path, "untracked"), []byte("foo\n"), 0600))
+		require.NoError(t, os.WriteFile(filepath.Join(path, "untracked"), []byte("foo\n"), 0600))
 
 		if got, err := r.IsDirty(); assert.NoError(t, err) {
 			assert.True(t, got)
@@ -148,14 +137,13 @@ func TestIsDirty(t *testing.T) {
 	})
 
 	t.Run("changed file", func(t *testing.T) {
-		repo, path, teardown := testutils.NewGitRepo(t)
-		defer teardown()
+		repo, path := testutils.NewGitRepo(t)
 
 		testutils.SimpleGitRepo(t, repo, path)
 
 		r, err := New(path)
 		require.NoError(t, err)
-		require.NoError(t, ioutil.WriteFile(filepath.Join(path, "foo"), []byte("some new content\n"), 0600))
+		require.NoError(t, os.WriteFile(filepath.Join(path, "foo"), []byte("some new content\n"), 0600))
 
 		if got, err := r.IsDirty(); assert.NoError(t, err) {
 			assert.True(t, got)
@@ -163,14 +151,13 @@ func TestIsDirty(t *testing.T) {
 	})
 
 	t.Run("staged file", func(t *testing.T) {
-		repo, path, teardown := testutils.NewGitRepo(t)
-		defer teardown()
+		repo, path := testutils.NewGitRepo(t)
 
 		testutils.SimpleGitRepo(t, repo, path)
 
 		r, err := New(path)
 		require.NoError(t, err)
-		require.NoError(t, ioutil.WriteFile(filepath.Join(path, "foo"), []byte("some new content\n"), 0600))
+		require.NoError(t, os.WriteFile(filepath.Join(path, "foo"), []byte("some new content\n"), 0600))
 
 		wt, err := repo.Worktree()
 		require.NoError(t, err)
@@ -191,8 +178,7 @@ func TestPushTags(t *testing.T) {
 }
 
 func TestPushTag_no_remote(t *testing.T) {
-	repo, path, teardown := testutils.NewGitRepo(t)
-	defer teardown()
+	repo, path := testutils.NewGitRepo(t)
 
 	testutils.SimpleGitRepo(t, repo, path)
 
@@ -269,8 +255,7 @@ func TestRevList(t *testing.T) {
 		},
 	}
 
-	repo, path, teardown := testutils.NewGitRepo(t)
-	defer teardown()
+	repo, path := testutils.NewGitRepo(t)
 
 	testutils.SimpleGitRepo(t, repo, path)
 
@@ -292,8 +277,7 @@ func TestRevList_one_commit(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	repo, path, teardown := testutils.NewGitRepo(t)
-	defer teardown()
+	repo, path := testutils.NewGitRepo(t)
 
 	testutils.CommitFile(t, repo, path, "foo", "add foo", []byte("contents"))
 
@@ -313,8 +297,7 @@ func TestRevList_empty_repo(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	_, path, teardown := testutils.NewGitRepo(t)
-	defer teardown()
+	_, path := testutils.NewGitRepo(t)
 
 	r, err := New(path)
 	require.NoError(err)
@@ -329,8 +312,7 @@ func TestRevList_empty_repo(t *testing.T) {
 }
 
 func TestRevList_empty_start(t *testing.T) {
-	repo, path, teardown := testutils.NewGitRepo(t)
-	defer teardown()
+	repo, path := testutils.NewGitRepo(t)
 
 	testutils.SimpleGitRepo(t, repo, path)
 
@@ -346,8 +328,7 @@ func TestRevList_empty_start(t *testing.T) {
 }
 
 func TestTags(t *testing.T) {
-	repo, path, teardown := testutils.NewGitRepo(t)
-	defer teardown()
+	repo, path := testutils.NewGitRepo(t)
 
 	testutils.SimpleGitRepo(t, repo, path)
 
@@ -372,8 +353,7 @@ func TestTags(t *testing.T) {
 }
 
 func TestTags_no_tags(t *testing.T) {
-	repo, path, teardown := testutils.NewGitRepo(t)
-	defer teardown()
+	repo, path := testutils.NewGitRepo(t)
 
 	testutils.CommitFile(t, repo, path, "foo.txt", "chore: adding a foo", []byte("foo\n"))
 
@@ -386,8 +366,7 @@ func TestTags_no_tags(t *testing.T) {
 }
 
 func TestTags_prefixes(t *testing.T) {
-	repo, path, teardown := testutils.NewGitRepo(t)
-	defer teardown()
+	repo, path := testutils.NewGitRepo(t)
 
 	testutils.SimpleGitRepo(t, repo, path)
 

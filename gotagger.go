@@ -6,7 +6,6 @@ package gotagger
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -229,7 +228,7 @@ func (g *Gotagger) findAllModules(include []string) (modules []module, err error
 
 		if strings.HasSuffix(relPath, filepathSep+goMod) || relPath == goMod {
 			logger.Info("found go module")
-			data, err := ioutil.ReadFile(pth)
+			data, err := os.ReadFile(pth)
 			if err != nil {
 				return err
 			}

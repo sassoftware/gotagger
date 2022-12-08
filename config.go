@@ -149,10 +149,10 @@ func (c *Config) ParseJSON(data []byte) error {
 //
 // If an option is not mentioned, then the default is the zero-value for its type.
 //
-//	- RemoteName
-//		origin
-//	- VersionPrefix
-//		v
+//   - RemoteName
+//     origin
+//   - VersionPrefix
+//     v
 func NewDefaultConfig() Config {
 	return Config{
 		CommitTypeTable: mapper.NewTable(nil, mapper.IncrementPatch),
