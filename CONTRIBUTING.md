@@ -232,7 +232,5 @@ Consult [GitHub Help] for more information on using pull requests.
 [Remote - Container]: https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers
 [ci]: https://github.com/sassoftware/gotagger/actions?query=workflow%3ACI
 [pre-commit]: https://pre-commit.com/
-[rapid]: https://github.com/flyingmutant/rapid
 [semantic newlines]: https://rhodesmill.org/brandon/2012/one-sentence-per-line/
 [stentor]: https://github.com/wfscheper/stentor
-[table-driven tests]: https://github.com/golang/go/wiki/TableDrivenTests
