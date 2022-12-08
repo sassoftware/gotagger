@@ -6,7 +6,7 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -159,7 +159,7 @@ func TestGoTagger(t *testing.T) {
 			wantOut: "v1.4.0\n",
 			extraSetup: func(t *testing.T, repo *git.Repository, path string) {
 				testutils.CreateTag(t, repo, path, "v1.3.0")
-				require.NoError(t, ioutil.WriteFile(filepath.Join(path, "foo"), []byte("foo\n"), 0600))
+				require.NoError(t, os.WriteFile(filepath.Join(path, "foo"), []byte("foo\n"), 0600))
 			},
 		},
 		{
@@ -168,7 +168,7 @@ func TestGoTagger(t *testing.T) {
 			wantOut: "v1.3.1\n",
 			extraSetup: func(t *testing.T, repo *git.Repository, path string) {
 				testutils.CreateTag(t, repo, path, "v1.3.0")
-				require.NoError(t, ioutil.WriteFile(filepath.Join(path, "foo"), []byte("foo\n"), 0600))
+				require.NoError(t, os.WriteFile(filepath.Join(path, "foo"), []byte("foo\n"), 0600))
 			},
 		},
 		{
@@ -246,8 +246,7 @@ func TestGoTagger(t *testing.T) {
 		t.Run(tt.title, func(t *testing.T) {
 			t.Parallel()
 
-			repo, path, teardown := testutils.NewGitRepo(t)
-			defer teardown()
+			repo, path := testutils.NewGitRepo(t)
 
 			testutils.SimpleGitRepo(t, repo, path)
 

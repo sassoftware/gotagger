@@ -4,7 +4,7 @@
 package gotagger
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -86,8 +86,7 @@ func TestGotagger_latestModule(t *testing.T) {
 				t.Skip("disabled in test code")
 			}
 
-			g, repo, path, teardown := newGotagger(t)
-			defer teardown()
+			g, repo, path := newGotagger(t)
 
 			tt.repoFunc(t, repo, path)
 
@@ -102,8 +101,7 @@ func TestGotagger_latestModule(t *testing.T) {
 }
 
 func TestGotagger_ModuleVersion(t *testing.T) {
-	g, repo, path, teardown := newGotagger(t)
-	defer teardown()
+	g, repo, path := newGotagger(t)
 
 	simpleGoRepo(t, repo, path)
 
@@ -118,8 +116,7 @@ func TestGotagger_ModuleVersion(t *testing.T) {
 }
 
 func TestGotagger_ModuleVersions_PreMajor(t *testing.T) {
-	g, repo, path, teardown := newGotagger(t)
-	defer teardown()
+	g, repo, path := newGotagger(t)
 
 	// set PreMajor
 	g.Config.PreMajor = true
@@ -638,8 +635,7 @@ func TestGotagger_versioning(t *testing.T) {
 				t.Skip("disabled in test code")
 			}
 
-			g, repo, path, teardown := newGotagger(t)
-			defer teardown()
+			g, repo, path := newGotagger(t)
 
 			tt.repoFunc(t, repo, path)
 
@@ -983,8 +979,7 @@ func TestGotagger_TagRepo_ignore_modules(t *testing.T) {
 		t.Run(tt.title, func(t *testing.T) {
 			t.Parallel()
 
-			g, repo, path, teardown := newGotagger(t)
-			defer teardown()
+			g, repo, path := newGotagger(t)
 
 			tt.repoFunc(t, repo, path)
 
@@ -1004,8 +999,7 @@ func TestGotagger_TagRepo_force(t *testing.T) {
 
 	t.Run("force-false", func(t *testing.T) {
 		t.Parallel()
-		g, repo, path, teardown := newGotagger(t)
-		defer teardown()
+		g, repo, path := newGotagger(t)
 
 		simpleGoRepo(t, repo, path)
 
@@ -1020,8 +1014,7 @@ func TestGotagger_TagRepo_force(t *testing.T) {
 
 	t.Run("force-true", func(t *testing.T) {
 		t.Parallel()
-		g, repo, path, teardown := newGotagger(t)
-		defer teardown()
+		g, repo, path := newGotagger(t)
 
 		simpleGoRepo(t, repo, path)
 
@@ -1037,8 +1030,7 @@ func TestGotagger_TagRepo_force(t *testing.T) {
 }
 
 func TestGotagger_TagRepo_validation_extra(t *testing.T) {
-	g, repo, path, teardown := newGotagger(t)
-	defer teardown()
+	g, repo, path := newGotagger(t)
 
 	masterV1GitRepo(t, repo, path)
 
@@ -1054,16 +1046,15 @@ Modules: foo/bar, foo
 }
 
 func TestGotagger_TagRepo_validation_missing(t *testing.T) {
-	g, repo, path, teardown := newGotagger(t)
-	defer teardown()
+	g, repo, path := newGotagger(t)
 
 	masterV1GitRepo(t, repo, path)
 
-	if err := ioutil.WriteFile(filepath.Join(path, "CHANGELOG.md"), []byte(`contents`), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(path, "CHANGELOG.md"), []byte(`contents`), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := ioutil.WriteFile(filepath.Join(path, "bar", "CHANGELOG.md"), []byte(`contents`), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(path, "bar", "CHANGELOG.md"), []byte(`contents`), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1096,8 +1087,7 @@ func TestGotagger_TagRepo_validation_missing(t *testing.T) {
 }
 
 func TestGotagger_Version(t *testing.T) {
-	g, repo, path, teardown := newGotagger(t)
-	defer teardown()
+	g, repo, path := newGotagger(t)
 
 	simpleGoRepo(t, repo, path)
 
@@ -1107,8 +1097,7 @@ func TestGotagger_Version(t *testing.T) {
 }
 
 func TestGotagger_Version_no_module(t *testing.T) {
-	g, repo, path, teardown := newGotagger(t)
-	defer teardown()
+	g, repo, path := newGotagger(t)
 
 	testutils.SimpleGitRepo(t, repo, path)
 
@@ -1118,8 +1107,7 @@ func TestGotagger_Version_no_module(t *testing.T) {
 }
 
 func TestGotagger_Version_path_filter(t *testing.T) {
-	g, repo, path, teardown := newGotagger(t)
-	defer teardown()
+	g, repo, path := newGotagger(t)
 
 	g.Config.Paths = []string{"baz"}
 	g.Config.VersionPrefix = "baz/v"
@@ -1156,8 +1144,7 @@ func TestGotagger_Version_path_filter(t *testing.T) {
 }
 
 func TestGotagger_Version_tag_head(t *testing.T) {
-	g, repo, path, teardown := newGotagger(t)
-	defer teardown()
+	g, repo, path := newGotagger(t)
 
 	simpleGoRepo(t, repo, path)
 
@@ -1171,8 +1158,7 @@ func TestGotagger_Version_tag_head(t *testing.T) {
 }
 
 func TestGotagger_Version_IgnoreModules(t *testing.T) {
-	g, repo, path, teardown := newGotagger(t)
-	defer teardown()
+	g, repo, path := newGotagger(t)
 
 	// set PreMajor
 	g.Config.IgnoreModules = true
@@ -1191,8 +1177,7 @@ func TestGotagger_Version_IgnoreModules(t *testing.T) {
 }
 
 func TestGotagger_Version_breaking(t *testing.T) {
-	g, repo, path, teardown := newGotagger(t)
-	defer teardown()
+	g, repo, path := newGotagger(t)
 
 	simpleGoRepo(t, repo, path)
 
@@ -1205,8 +1190,7 @@ func TestGotagger_Version_breaking(t *testing.T) {
 }
 
 func TestNew(t *testing.T) {
-	_, path, teardown := testutils.NewGitRepo(t)
-	defer teardown()
+	_, path := testutils.NewGitRepo(t)
 
 	// invalid path should return an error
 	_, err := New(filepath.FromSlash("/does/not/exist"))
@@ -1326,8 +1310,7 @@ func TestGotagger_findAllModules(t *testing.T) {
 		t.Run(tt.title, func(t *testing.T) {
 			t.Parallel()
 
-			g, repo, path, teardown := newGotagger(t)
-			defer teardown()
+			g, repo, path := newGotagger(t)
 
 			tt.repoFunc(t, repo, path)
 
@@ -1416,8 +1399,7 @@ func TestGotagger_incrementVersion(t *testing.T) {
 		t.Run(tt.title, func(t *testing.T) {
 			t.Parallel()
 
-			g, repo, path, teardown := newGotagger(t)
-			defer teardown()
+			g, repo, path := newGotagger(t)
 
 			if tt.repoFunc != nil {
 				tt.repoFunc(t, repo, path)
@@ -1429,7 +1411,7 @@ func TestGotagger_incrementVersion(t *testing.T) {
 			g.Config.PreMajor = tt.preMajor
 
 			// add untracked file for dirty tests
-			require.NoError(t, ioutil.WriteFile(filepath.Join(path, "untracked"), []byte("untracked\n"), 0600))
+			require.NoError(t, os.WriteFile(filepath.Join(path, "untracked"), []byte("untracked\n"), 0600))
 
 			if got, err := g.incrementVersion(semver.MustParse("0.1.0"), tt.commits); assert.NoError(t, err) {
 				assert.Equal(t, tt.want, got)
@@ -1538,8 +1520,7 @@ func Test_filterCommitsByModule(t *testing.T) {
 		t.Run(tt.title, func(t *testing.T) {
 			t.Parallel()
 
-			g, repo, path, teardown := newGotagger(t)
-			defer teardown()
+			g, repo, path := newGotagger(t)
 
 			tt.repoFunc(t, repo, path)
 
@@ -1623,10 +1604,10 @@ func TestGotagger_validateModules(t *testing.T) {
 	}
 }
 
-func newGotagger(t testutils.T) (g *Gotagger, repo *sgit.Repository, path string, teardown func()) {
+func newGotagger(t testutils.T) (g *Gotagger, repo *sgit.Repository, path string) {
 	t.Helper()
 
-	repo, path, teardown = testutils.NewGitRepo(t)
+	repo, path = testutils.NewGitRepo(t)
 
 	r, err := git.New(path)
 	if err != nil {

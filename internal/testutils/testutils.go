@@ -4,7 +4,6 @@
 package testutils
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
@@ -27,6 +26,7 @@ type T interface {
 	Fatalf(string, ...interface{})
 	Helper()
 	Log(args ...interface{})
+	TempDir() string
 }
 
 type FileCommit struct {
@@ -56,7 +56,7 @@ func CommitFiles(t T, repo *git.Repository, path, message string, files []FileCo
 			t.Fatal(err)
 		}
 
-		if err := ioutil.WriteFile(fname, file.Contents, 0600); err != nil {
+		if err := os.WriteFile(fname, file.Contents, 0600); err != nil {
 			t.Fatal(err)
 		}
 
@@ -98,10 +98,10 @@ func CreateTag(t T, r *git.Repository, path, name string) {
 	}
 }
 
-func NewGitRepo(t T) (repo *git.Repository, path string, teardown func()) {
+func NewGitRepo(t T) (repo *git.Repository, path string) {
 	t.Helper()
 
-	path, teardown = TempDir(t)
+	path = t.TempDir()
 
 	// init git repo
 	var err error
@@ -161,22 +161,4 @@ func SimpleGitRepo(t T, repo *git.Repository, path string) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-}
-
-func TempDir(t T) (tmpdir string, teardown func()) {
-	t.Helper()
-
-	var err error
-	tmpdir, err = ioutil.TempDir("", "gotagger-")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	teardown = func() {
-		if err := os.RemoveAll(tmpdir); err != nil {
-			t.Log(err)
-		}
-	}
-
-	return
 }
