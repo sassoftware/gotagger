@@ -577,7 +577,7 @@ func TestGotagger_versioning(t *testing.T) {
 			prefix: "v",
 			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
 				simpleGoRepo(t, r, p)
-				testutils.CreateTag(t, r, p, "v1.1.0")
+				testutils.CreateTag(t, r, "v1.1.0")
 				testutils.CommitFile(t, r, p, "sub/module/other", "feat: add other submodule file", []byte("contents"))
 				testutils.CommitFile(t, r, p, "foo.go", "fix: add file to foo", []byte("foo"))
 			},
@@ -598,7 +598,7 @@ func TestGotagger_versioning(t *testing.T) {
 			prefix: "v",
 			repoFunc: func(t testutils.T, r *sgit.Repository, p string) {
 				simpleGoRepo(t, r, p)
-				testutils.CreateTag(t, r, p, "v1.1.0")
+				testutils.CreateTag(t, r, "v1.1.0")
 				testutils.CommitFile(t, r, p, "fix: bar", "bar", []byte(`fix bar\n`))
 				testutils.CommitFiles(t, r, p, "feat: change both modules", []testutils.FileCommit{
 					{
@@ -976,6 +976,8 @@ func TestGotagger_TagRepo_ignore_modules(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
+
 		t.Run(tt.title, func(t *testing.T) {
 			t.Parallel()
 
@@ -1137,7 +1139,7 @@ func TestGotagger_Version_path_filter(t *testing.T) {
 	}
 
 	// force version
-	testutils.CreateTag(t, repo, path, "baz/v1.0.0")
+	testutils.CreateTag(t, repo, "baz/v1.0.0")
 	if v, err := g.Version(); assert.NoError(t, err) {
 		assert.Equal(t, "baz/v1.0.0", v)
 	}
@@ -1150,7 +1152,7 @@ func TestGotagger_Version_tag_head(t *testing.T) {
 
 	// tag HEAD higher than what gotagger would return
 	version := "v1.10.0"
-	testutils.CreateTag(t, repo, path, version)
+	testutils.CreateTag(t, repo, version)
 
 	if got, err := g.Version(); assert.NoError(t, err) {
 		assert.Equal(t, version, got)
@@ -1166,7 +1168,7 @@ func TestGotagger_Version_IgnoreModules(t *testing.T) {
 	simpleGoRepo(t, repo, path)
 
 	// create a v2 tag
-	testutils.CreateTag(t, repo, path, "v2.0.0")
+	testutils.CreateTag(t, repo, "v2.0.0")
 
 	// make a feature commit
 	testutils.CommitFile(t, repo, path, "foo.go", "feat: update foo", []byte("foo contents\n"))
@@ -1517,6 +1519,8 @@ func Test_filterCommitsByModule(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
+
 		t.Run(tt.title, func(t *testing.T) {
 			t.Parallel()
 
@@ -1683,11 +1687,11 @@ func mixedTagRepo(t testutils.T, repo *sgit.Repository, path string) {
 
 	// create bar.go and tag it 0.1.0 (no prefix)
 	testutils.CommitFile(t, repo, path, "bar.go", "feat: add bar.go", []byte("bar\n"))
-	testutils.CreateTag(t, repo, path, "0.1.0")
+	testutils.CreateTag(t, repo, "0.1.0")
 
 	// create foo.go and tag it v1.0.0
 	testutils.CommitFile(t, repo, path, "foo.go", "feat: add foo.go", []byte("foo\n"))
-	testutils.CreateTag(t, repo, path, "v1.0.0")
+	testutils.CreateTag(t, repo, "v1.0.0")
 }
 
 func mixedTagGoRepo(t testutils.T, repo *sgit.Repository, path string) {
@@ -1704,19 +1708,19 @@ func v2DirGitRepo(t testutils.T, repo *sgit.Repository, path string) {
 
 	// create top-level go.mod and tag it v1.0.0
 	testutils.CommitFile(t, repo, path, "go.mod", "feat: add go.mod", []byte("module foo\n"))
-	testutils.CreateTag(t, repo, path, "v1.0.0")
+	testutils.CreateTag(t, repo, "v1.0.0")
 
 	// create sub module and tag it v1.0.0
 	testutils.CommitFile(t, repo, path, filepath.Join("bar", "go.mod"), "feat: add bar/go.mod", []byte("module foo/bar\n"))
-	testutils.CreateTag(t, repo, path, "bar/v1.0.0")
+	testutils.CreateTag(t, repo, "bar/v1.0.0")
 
 	// create a v2 directory and tag v2.0.0
 	testutils.CommitFile(t, repo, path, filepath.Join("v2", "go.mod"), "feat!: add v2/go.mod", []byte("module foo/v2\n"))
-	testutils.CreateTag(t, repo, path, "v2.0.0")
+	testutils.CreateTag(t, repo, "v2.0.0")
 
 	// create bar/v2 directory and tag bar/v2.0.0
 	testutils.CommitFile(t, repo, path, filepath.Join("bar", "v2", "go.mod"), "feat!: add bar/v2/go.mod", []byte("module foo/bar/v2\n"))
-	testutils.CreateTag(t, repo, path, "bar/v2.0.0")
+	testutils.CreateTag(t, repo, "bar/v2.0.0")
 }
 
 func setupV1Modules(t testutils.T, repo *sgit.Repository, path string) (head plumbing.Hash) {
@@ -1724,11 +1728,11 @@ func setupV1Modules(t testutils.T, repo *sgit.Repository, path string) (head plu
 
 	// create top-level go.mod and tag it v1.0.0
 	testutils.CommitFile(t, repo, path, "go.mod", "feat: add go.mod", []byte("module foo\n"))
-	testutils.CreateTag(t, repo, path, "v1.0.0")
+	testutils.CreateTag(t, repo, "v1.0.0")
 
 	// create sub module and tag it v1.0.0
 	head = testutils.CommitFile(t, repo, path, filepath.Join("bar", "go.mod"), "feat: add bar/go.mod", []byte("module foo/bar\n"))
-	testutils.CreateTag(t, repo, path, "bar/v1.0.0")
+	testutils.CreateTag(t, repo, "bar/v1.0.0")
 
 	return
 }
@@ -1737,11 +1741,11 @@ func setupV2Modules(t testutils.T, repo *sgit.Repository, path string) (head plu
 	t.Helper()
 
 	testutils.CommitFile(t, repo, path, "go.mod", "feat!: add foo/v2 go.mod", []byte("module foo/v2\n"))
-	testutils.CreateTag(t, repo, path, "v2.0.0")
+	testutils.CreateTag(t, repo, "v2.0.0")
 
 	// update bar module to v2
 	head = testutils.CommitFile(t, repo, path, filepath.Join("bar", "go.mod"), "feat!: add bar/v2 go.mod", []byte("module foo/bar/v2\n"))
-	testutils.CreateTag(t, repo, path, "bar/v2.0.0")
+	testutils.CreateTag(t, repo, "bar/v2.0.0")
 
 	return
 }
@@ -1753,7 +1757,7 @@ func simpleGoRepo(t testutils.T, repo *sgit.Repository, path string) {
 	testutils.CommitFile(t, repo, path, "go.mod", "feat: add go.mod", []byte("module foo\n"))
 	testutils.CommitFile(t, repo, path, "sub/module/go.mod", "feat: add a submodule", []byte("module foo/sub/module\n"))
 	testutils.CommitFile(t, repo, path, "sub/module/file", "feat: add a file to submodule", []byte("some data"))
-	testutils.CreateTag(t, repo, path, "sub/module/v0.1.0")
+	testutils.CreateTag(t, repo, "sub/module/v0.1.0")
 	testutils.CommitFile(t, repo, path, "sub/module/file", "fix: fix submodule", []byte("some more data"))
 }
 

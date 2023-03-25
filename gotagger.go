@@ -595,7 +595,7 @@ func (g *Gotagger) versionPath(p string) (string, error) {
 	// group the commits by the configured paths
 	// this eliminates commits that only touched files that are
 	// beneath subpaths of p
-	commitsByPath := g.groupCommitsByPath(commits, g.Config.Paths)
+	commitsByPath := g.groupCommitsByPath(commits)
 
 	// increment the version
 	version, err := g.incrementVersion(latest, commitsByPath[p])
@@ -701,7 +701,7 @@ func (g *Gotagger) groupCommitsByModule(commits []git.Commit, modules []module) 
 	return grouped
 }
 
-func (g *Gotagger) groupCommitsByPath(commits []git.Commit, paths []string) map[string][]git.Commit {
+func (g *Gotagger) groupCommitsByPath(commits []git.Commit) map[string][]git.Commit {
 	g.logger.Info("group commits by path")
 
 	// make a map of paths for faster lookup

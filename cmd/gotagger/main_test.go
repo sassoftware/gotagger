@@ -158,7 +158,7 @@ func TestGoTagger(t *testing.T) {
 			args:    []string{"-dirty=minor"},
 			wantOut: "v1.4.0\n",
 			extraSetup: func(t *testing.T, repo *git.Repository, path string) {
-				testutils.CreateTag(t, repo, path, "v1.3.0")
+				testutils.CreateTag(t, repo, "v1.3.0")
 				require.NoError(t, os.WriteFile(filepath.Join(path, "foo"), []byte("foo\n"), 0600))
 			},
 		},
@@ -167,7 +167,7 @@ func TestGoTagger(t *testing.T) {
 			args:    []string{"-dirty=patch"},
 			wantOut: "v1.3.1\n",
 			extraSetup: func(t *testing.T, repo *git.Repository, path string) {
-				testutils.CreateTag(t, repo, path, "v1.3.0")
+				testutils.CreateTag(t, repo, "v1.3.0")
 				require.NoError(t, os.WriteFile(filepath.Join(path, "foo"), []byte("foo\n"), 0600))
 			},
 		},
@@ -259,7 +259,7 @@ func TestGoTagger(t *testing.T) {
 				wantErr = fmt.Sprintf(tt.wantErr, path)
 			}
 
-			g, stdout, stderr := newGotagger(t, path, tt.args)
+			g, stdout, stderr := newGotagger(path, tt.args)
 			assert.Equal(t, tt.wantRc, g.Run())
 			if wantErr != "" {
 				assert.Contains(t, stderr.String(), wantErr)
@@ -274,7 +274,7 @@ func TestGoTagger(t *testing.T) {
 	}
 }
 
-func newGotagger(t *testing.T, dir string, args []string) (*GoTagger, *bytes.Buffer, *bytes.Buffer) {
+func newGotagger(dir string, args []string) (*GoTagger, *bytes.Buffer, *bytes.Buffer) {
 	out := &bytes.Buffer{}
 	err := &bytes.Buffer{}
 	g := &GoTagger{
