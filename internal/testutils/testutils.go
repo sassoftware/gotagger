@@ -78,7 +78,7 @@ func CommitFiles(t T, repo *git.Repository, path, message string, files []FileCo
 	return h
 }
 
-func CreateTag(t T, r *git.Repository, path, name string) {
+func CreateTag(t T, r *git.Repository, name string) {
 	t.Helper()
 
 	rev, err := r.ResolveRevision(plumbing.Revision("HEAD"))
@@ -128,7 +128,7 @@ func SimpleGitRepo(t T, repo *git.Repository, path string) {
 	CommitFile(t, repo, path, "foo", "feat: more foo", []byte("foo more"))
 
 	// tag commit
-	CreateTag(t, repo, path, "v1.0.0")
+	CreateTag(t, repo, "v1.0.0")
 
 	// commit another change
 	CommitFile(t, repo, path, "bar", "feat: bar\n\nThis is a great bar.", []byte("some bars too"))
@@ -153,7 +153,7 @@ func SimpleGitRepo(t T, repo *git.Repository, path string) {
 
 	// commit to that branch and tag it
 	CommitFile(t, repo, path, filepath.Join("baz", "foo"), "feat: commit a baz", []byte("baz"))
-	CreateTag(t, repo, path, "v0.1.0")
+	CreateTag(t, repo, "v0.1.0")
 
 	// back to master
 	if err := w.Checkout(&git.CheckoutOptions{

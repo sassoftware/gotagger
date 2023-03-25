@@ -36,6 +36,8 @@ func TestCommit_Message(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
+
 		t.Run(tt.want, func(t *testing.T) {
 			t.Parallel()
 

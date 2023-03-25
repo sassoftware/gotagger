@@ -373,7 +373,7 @@ func TestTags_prefixes(t *testing.T) {
 	// add a submodule tag
 	submodule := "sub/module"
 	testutils.CommitFile(t, repo, path, filepath.Join("sub", "module", "file"), "feat: add submodule", []byte("data"))
-	testutils.CreateTag(t, repo, path, submodule+"/v0.1.0")
+	testutils.CreateTag(t, repo, submodule+"/v0.1.0")
 
 	r, err := New(path)
 	if err != nil {
