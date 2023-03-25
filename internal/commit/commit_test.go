@@ -53,7 +53,7 @@ func TestParse(t *testing.T) {
 		scope := rapid.StringMatching(`[\w$.\-*/ ]*`).Draw(t, "scope")
 		isBreaking := rapid.Bool().Draw(t, "breaking")
 		subject := rapid.StringMatching(`^.*$`).Draw(t, "subject")
-		body := rapid.Transform[[]string, string](rapid.SliceOf(
+		body := rapid.Map(rapid.SliceOf(
 			rapid.String().Filter(func(s string) bool { return !strings.Contains(s, ": ") }),
 		), func(s []string) string {
 			return strings.Join(s, "\n")
@@ -103,7 +103,7 @@ func TestParse_merge(t *testing.T) {
 		scope := rapid.StringMatching(`^\w*$`).Draw(t, "scope")
 		isBreaking := rapid.Bool().Draw(t, "breaking")
 		subject := rapid.StringMatching(`^.+$`).Draw(t, "subject")
-		body := rapid.Transform[[]string, string](
+		body := rapid.Map(
 			rapid.SliceOf(
 				rapid.String().Filter(func(s string) bool { return !strings.Contains(s, ": ") }),
 			),
@@ -193,7 +193,7 @@ func TestParse_footer(t *testing.T) {
 		).Draw(
 			t, "bFooterTitle",
 		)
-		bFooterText := rapid.Transform[[]string, string](
+		bFooterText := rapid.Map(
 			rapid.SliceOf(
 				rapid.
 					String().
@@ -207,7 +207,7 @@ func TestParse_footer(t *testing.T) {
 			func(s []string) string { return strings.Join(s, "\n") },
 		).Draw(t, "bFooterText")
 		footerTitle := rapid.StringMatching(`^([[:alnum:]][-\w ]*)?`).Draw(t, "footerTitle")
-		footerText := rapid.Transform[[]string, string](
+		footerText := rapid.Map(
 			rapid.SliceOf(
 				rapid.
 					String().
