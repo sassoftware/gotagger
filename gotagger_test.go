@@ -1443,7 +1443,7 @@ func Test_filterCommitsByModule(t *testing.T) {
 		{
 			title:    "simple git repo sub/module",
 			repoFunc: simpleGoRepo,
-			mod:      module{filepath.Join("sub", "module"), "sub/module", "sub/module/"},
+			mod:      module{filepath.Join("sub", "module"), "foo/sub/module", "sub/module/"},
 			want: []string{
 				"fix: fix submodule",
 				"feat: add a file to submodule",
@@ -1495,7 +1495,7 @@ func Test_filterCommitsByModule(t *testing.T) {
 		{
 			title:    "v2 directory foo/v2 module",
 			repoFunc: v2DirGitRepo,
-			mod:      module{".", "foo", ""},
+			mod:      module{"v2", "foo/v2", ""},
 			want: []string{
 				"feat!: add v2/go.mod",
 			},
