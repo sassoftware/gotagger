@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.0
 	github.com/go-git/go-git/v5 v5.6.1
 	github.com/go-logr/logr v1.2.3
-	github.com/go-logr/zerologr v1.2.2
+	github.com/go-logr/zerologr v1.2.3
 	github.com/rs/zerolog v1.29.0
 	github.com/stretchr/testify v1.8.1
 	golang.org/x/mod v0.7.0
