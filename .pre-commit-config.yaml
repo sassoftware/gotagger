@@ -31,7 +31,7 @@ repos:
         exclude: >-
           ^(docs/arch/adr-template\.md|\.github/ISSUE_TEMPLATE/|\.stentor\.d/)
   - repo: https://github.com/adrienverge/yamllint
-    rev: v1.29.0
+    rev: v1.30.0
     hooks:
       - id: yamllint
         exclude: ^(.github/workflows/)
@@ -40,11 +40,12 @@ repos:
     hooks:
       - id: actionlint
   - repo: https://github.com/golangci/golangci-lint
-    rev: v1.52.0
+    rev: v1.52.1
     hooks:
       - id: golangci-lint
         args: [--allow-parallel-runners]
+        pass_filenames: false
 ci:
   autofix_prs: false
-  autoupdate_commit_msg: 'chore: auto-update of pre-commit hooks'
+  autoupdate_commit_msg: "chore: auto-update of pre-commit hooks"
   skip: [actionlint, golangci-lint]
