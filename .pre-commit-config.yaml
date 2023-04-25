@@ -3,7 +3,7 @@ default_stages: [commit]
 exclude: ^tests/data/
 repos:
   - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
-    rev: v9.4.0
+    rev: v9.5.0
     hooks:
       - id: commitlint
         stages: [commit-msg]
@@ -31,12 +31,12 @@ repos:
         exclude: >-
           ^(docs/arch/adr-template\.md|\.github/ISSUE_TEMPLATE/|\.stentor\.d/)
   - repo: https://github.com/adrienverge/yamllint
-    rev: v1.30.0
+    rev: v1.31.0
     hooks:
       - id: yamllint
         exclude: ^(.github/workflows/)
   - repo: https://github.com/rhysd/actionlint
-    rev: v1.6.23
+    rev: v1.6.24
     hooks:
       - id: actionlint
   - repo: https://github.com/golangci/golangci-lint
