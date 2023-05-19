@@ -8,7 +8,7 @@ require (
 	github.com/go-logr/logr v1.2.4
 	github.com/go-logr/zerologr v1.2.3
 	github.com/rs/zerolog v1.29.1
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.8.3
 	golang.org/x/mod v0.10.0
 	pgregory.net/rapid v0.5.5
 )
