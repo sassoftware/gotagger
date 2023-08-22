@@ -25,22 +25,22 @@ repos:
         args: [--notitle]
         exclude: ^(SUPPORT|\.github/ISSUE_TEMPLATE/)
   - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.33.0
+    rev: v0.35.0
     hooks:
       - id: markdownlint
         exclude: >-
           ^(docs/arch/adr-template\.md|\.github/ISSUE_TEMPLATE/|\.stentor\.d/)
   - repo: https://github.com/adrienverge/yamllint
-    rev: v1.31.0
+    rev: v1.32.0
     hooks:
       - id: yamllint
         exclude: ^(.github/workflows/)
   - repo: https://github.com/rhysd/actionlint
-    rev: v1.6.24
+    rev: v1.6.25
     hooks:
       - id: actionlint
   - repo: https://github.com/golangci/golangci-lint
-    rev: v1.52.2
+    rev: v1.54.2
     hooks:
       - id: golangci-lint
         args: [--allow-parallel-runners]
