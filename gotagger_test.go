@@ -45,6 +45,12 @@ func TestGotagger_latestModule(t *testing.T) {
 			want:     "v0.1.0",
 		},
 		{
+			title:    "new v2 module",
+			module:   module{".", "foo/v2", ""},
+			repoFunc: newV2Module,
+			want:     "v2.0.0",
+		},
+		{
 			title:    "latest foo v1 directory",
 			module:   module{".", "foo", ""},
 			repoFunc: v2DirGitRepo,
@@ -72,7 +78,7 @@ func TestGotagger_latestModule(t *testing.T) {
 			title:    "breaking change in v1 module",
 			module:   module{".", "foo/v2", ""},
 			repoFunc: untaggedV2Repo,
-			want:     "v1.0.0",
+			want:     "v2.0.0",
 		},
 	}
 
@@ -1701,6 +1707,13 @@ func mixedTagGoRepo(t testutils.T, repo *sgit.Repository, path string) {
 
 	// create a go.mod
 	testutils.CommitFile(t, repo, path, "go.mod", "feat: add go.mod", []byte("module foo\n"))
+}
+
+func newV2Module(t testutils.T, repo *sgit.Repository, path string) {
+	t.Helper()
+
+	// create top-level go.mod with v2 module
+	testutils.CommitFile(t, repo, path, "go.mod", "feat: add go.mod", []byte("module foo/v2\n"))
 }
 
 func v2DirGitRepo(t testutils.T, repo *sgit.Repository, path string) {
