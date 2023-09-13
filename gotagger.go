@@ -358,7 +358,7 @@ func (g *Gotagger) latestModule(tags []string, m module) (*semver.Version, strin
 
 	majorVersion := strings.TrimPrefix(versionRegex.FindString(m.name), goModSep)
 	if majorVersion == "" {
-		majorVersion = "v1"
+		majorVersion = "v0"
 	}
 
 	moduleVersion, err := semver.NewVersion(majorVersion + ".0.0")
@@ -366,7 +366,11 @@ func (g *Gotagger) latestModule(tags []string, m module) (*semver.Version, strin
 		return nil, "", err
 	}
 
-	maximumVersion := moduleVersion.IncMajor()
+	_maximumVersion := moduleVersion.IncMajor()
+	if majorVersion == "v0" {
+		_maximumVersion = _maximumVersion.IncMajor()
+	}
+	maximumVersion := &_maximumVersion
 	logger.Info("ignoring modules greater than " + g.Config.VersionPrefix + maximumVersion.String())
 
 	var latestVersion *semver.Version
@@ -375,7 +379,11 @@ func (g *Gotagger) latestModule(tags []string, m module) (*semver.Version, strin
 		// strip the module prefix from the tag so we can parse it as a semver
 		tagName := strings.TrimPrefix(tag, m.prefix)
 		// we want the highest version that is less than the next major version
-		if tver, err := semver.NewVersion(tagName); err == nil && tver.LessThan(&maximumVersion) {
+		tver, err := semver.NewVersion(tagName)
+		if err != nil {
+			continue
+		}
+		if tver.Compare(maximumVersion) < 0 && tver.Compare(moduleVersion) >= 0 {
 			if latestVersion == nil || latestVersion.LessThan(tver) {
 				logger.Info("found newer tag", "tag", tag)
 				latestVersion = tver
@@ -384,9 +392,9 @@ func (g *Gotagger) latestModule(tags []string, m module) (*semver.Version, strin
 		}
 	}
 
-	// if there were no tags, then return 0.0.0
+	// if there were no tags, then return the base module version
 	if latestVersion == nil {
-		return semver.MustParse("0.0.0"), "", nil
+		return moduleVersion, "", nil
 	}
 
 	hash, err := g.repo.RevParse(latestTag + "^{commit}")
