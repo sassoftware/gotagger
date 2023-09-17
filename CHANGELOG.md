@@ -3,10 +3,12 @@
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 - [Changelog](#changelog)
+  - [[v0.9.1] - 2023-09-16](#v091---2023-09-16)
+    - [Fixed](#fixed)
   - [[v0.9.0] - 2022-07-20](#v090---2022-07-20)
     - [Removed](#removed)
     - [Added](#added)
-    - [Fixed](#fixed)
+    - [Fixed](#fixed-1)
     - [Chores](#chores)
     - [CI](#ci)
   - [[v0.8.0] - 2022-03-11](#v080---2022-03-11)
@@ -14,12 +16,12 @@
   - [[v0.7.0] - 2021-12-08](#v070---2021-12-08)
     - [Added](#added-2)
   - [[v0.6.3] - 2021-08-26](#v063---2021-08-26)
-    - [Fixed](#fixed-1)
-  - [[v0.6.2] - 2021-07-09](#v062---2021-07-09)
     - [Fixed](#fixed-2)
+  - [[v0.6.2] - 2021-07-09](#v062---2021-07-09)
+    - [Fixed](#fixed-3)
     - [CI](#ci-1)
   - [[v0.6.1] - 2021-02-16](#v061---2021-02-16)
-    - [Fixed](#fixed-3)
+    - [Fixed](#fixed-4)
   - [[v0.6.0] - 2020/10/12](#v060---20201012)
     - [Feature](#feature)
     - [Fix](#fix)
@@ -33,18 +35,18 @@
     - [Refactor](#refactor-1)
   - [[v0.4.0] - 2019/07/10](#v040---20190710)
     - [Added](#added-3)
-    - [Fixed](#fixed-4)
-  - [[v0.3.1] - 2019/12/16](#v031---20191216)
     - [Fixed](#fixed-5)
+  - [[v0.3.1] - 2019/12/16](#v031---20191216)
+    - [Fixed](#fixed-6)
   - [[v0.3.0] - 2019/11/18](#v030---20191118)
     - [Added](#added-4)
   - [[v0.2.0] - 2019/11/15](#v020---20191115)
     - [Added](#added-5)
     - [Changed](#changed)
   - [[v0.1.2] - 2019/10/14](#v012---20191014)
-    - [Fixed](#fixed-6)
-  - [[v0.1.1] - 2019/10/12](#v011---20191012)
     - [Fixed](#fixed-7)
+  - [[v0.1.1] - 2019/10/12](#v011---20191012)
+    - [Fixed](#fixed-8)
   - [[v0.1.0] - 2019/10/11](#v010---20191011)
     - [Added](#added-6)
 
@@ -61,6 +63,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- stentor output starts -->
+## [v0.9.1] - 2023-09-16
+
+### Fixed
+
+- `gotagger` now returns a minimum version based on the Go module version.
+
+  For instance,
+  if you bump a module from v1 to v2,
+  `gotagger` will begin reporting the version as `v2.0.0`.
+  [#211](https://github.com/sassoftware/gotagger/issues/211)
+
+
+[v0.9.1]: https://github.com/sassoftware/gotagger/compare/v0.9.0...v0.9.1
+
+
+----
+
+
 ## [v0.9.0] - 2022-07-20
 
 ### Removed
