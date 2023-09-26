@@ -25,7 +25,7 @@ repos:
         args: [--notitle]
         exclude: ^(SUPPORT|\.github/ISSUE_TEMPLATE/)
   - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.36.0
+    rev: v0.37.0
     hooks:
       - id: markdownlint
         exclude: >-
@@ -36,7 +36,7 @@ repos:
       - id: yamllint
         exclude: ^(.github/workflows/)
   - repo: https://github.com/rhysd/actionlint
-    rev: v1.6.25
+    rev: v1.6.26
     hooks:
       - id: actionlint
   - repo: https://github.com/golangci/golangci-lint
