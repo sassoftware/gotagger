@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
 
       - name: Lint with actionlint
-        uses: reviewdog/action-actionlint@82693e9e3b239f213108d6e412506f8b54003586
+        uses: reviewdog/action-actionlint@9ccda195fd3a290c8596db7f1958c897deaa8c76
