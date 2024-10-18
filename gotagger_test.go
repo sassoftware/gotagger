@@ -83,8 +83,6 @@ func TestGotagger_latestModule(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.title, func(t *testing.T) {
 			t.Parallel()
 
@@ -632,8 +630,6 @@ func TestGotagger_versioning(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.title, func(t *testing.T) {
 			t.Parallel()
 
@@ -982,8 +978,6 @@ func TestGotagger_TagRepo_ignore_modules(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.title, func(t *testing.T) {
 			t.Parallel()
 
@@ -1313,8 +1307,6 @@ func TestGotagger_findAllModules(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.title, func(t *testing.T) {
 			t.Parallel()
 
@@ -1402,8 +1394,6 @@ func TestGotagger_incrementVersion(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.title, func(t *testing.T) {
 			t.Parallel()
 
@@ -1525,8 +1515,6 @@ func Test_filterCommitsByModule(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
-
 		t.Run(tt.title, func(t *testing.T) {
 			t.Parallel()
 
@@ -1600,7 +1588,6 @@ func TestGotagger_validateModules(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.title, func(t *testing.T) {
 			t.Parallel()
 

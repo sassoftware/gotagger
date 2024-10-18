@@ -1,5 +1,6 @@
 linters:
   enable:
+    - copyloopvar
     - errcheck
     - gocritic
     - goimports
@@ -9,9 +10,14 @@ linters:
     - ineffassign
     - revive
     - staticcheck
-    - typecheck
     - unused
 
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
+
+linters-settings:
+  revive:
+    rules:
+      - name: unused-parameter
+        disabled: true
