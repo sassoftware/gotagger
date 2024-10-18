@@ -442,7 +442,6 @@ func Test_hasPrefix(t *testing.T) {
 
 	t.Parallel()
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.title, func(t *testing.T) {
 			if got, want := hasPrefix(tt.version, tt.prefixes), tt.want; got != want {
 				t.Errorf("hasPrefix returned %v, want %v", got, want)
