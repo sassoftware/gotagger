@@ -1,31 +1,5 @@
 # gotagger
 
-## Table of Contents
-
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-
-- [Overview](#overview)
-  - [Installation](#installation)
-- [Getting started](#getting-started)
-  - [Running](#running)
-  - [Configuration](#configuration)
-    - [Default Increment](#default-increment)
-    - [Increment Dirty Worktree](#increment-dirty-worktree)
-    - [Exclude Modules](#exclude-modules)
-    - [Ignore Modules](#ignore-modules)
-    - [Increment Mappings](#increment-mappings)
-    - [Pre-Release Incrementing](#pre-release-incrementing)
-    - [Version Prefix](#version-prefix)
-  - [Go Module Support](#go-module-support)
-  - [Path Filtering](#path-filtering)
-- [Using gotagger as a library](#using-gotagger-as-a-library)
-- [Contributing](#contributing)
-- [License](#license)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-<!-- markdownlint-disable MD012 MD013 -->
-
 ## Overview
 
 `gotagger` is a library and CLI

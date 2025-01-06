@@ -1,27 +1,5 @@
 # How to Contribute
 
-## Table of Contents
-
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-
-- [Types of Contributions](#types-of-contributions)
-  - [Bug reports](#bug-reports)
-- [Fix Bugs](#fix-bugs)
-  - [Implement Features](#implement-features)
-  - [Write Documentation](#write-documentation)
-  - [Submit Feedback](#submit-feedback)
-- [Development](#development)
-  - [VS Code Dev Container](#vs-code-dev-container)
-  - [Local Development](#local-development)
-  - [Get Started](#get-started)
-  - [Pull Request Guidelines](#pull-request-guidelines)
-- [Changelog Entries](#changelog-entries)
-- [Contributor License Agreement](#contributor-license-agreement)
-- [Code reviews](#code-reviews)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
 Contributions are welcome,
 and they are greatly appreciated!
 There's no such thing as a contribution that is "too small".
