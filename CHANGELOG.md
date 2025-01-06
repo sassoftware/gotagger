@@ -1,60 +1,4 @@
-<!-- markdownlint-disable -->
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-
-- [Changelog](#changelog)
-  - [[v0.9.1] - 2023-09-16](#v091---2023-09-16)
-    - [Fixed](#fixed)
-  - [[v0.9.0] - 2022-07-20](#v090---2022-07-20)
-    - [Removed](#removed)
-    - [Added](#added)
-    - [Fixed](#fixed-1)
-    - [Chores](#chores)
-    - [CI](#ci)
-  - [[v0.8.0] - 2022-03-11](#v080---2022-03-11)
-    - [Added](#added-1)
-  - [[v0.7.0] - 2021-12-08](#v070---2021-12-08)
-    - [Added](#added-2)
-  - [[v0.6.3] - 2021-08-26](#v063---2021-08-26)
-    - [Fixed](#fixed-2)
-  - [[v0.6.2] - 2021-07-09](#v062---2021-07-09)
-    - [Fixed](#fixed-3)
-    - [CI](#ci-1)
-  - [[v0.6.1] - 2021-02-16](#v061---2021-02-16)
-    - [Fixed](#fixed-4)
-  - [[v0.6.0] - 2020/10/12](#v060---20201012)
-    - [Feature](#feature)
-    - [Fix](#fix)
-  - [[v0.5.2] - 2020/09/22](#v052---20200922)
-    - [Fix](#fix-1)
-  - [[v0.5.1] - 2020/09/17](#v051---20200917)
-    - [Refactor](#refactor)
-  - [[v0.5.0] - 2020/09/17](#v050---20200917)
-    - [Feature](#feature-1)
-    - [Fix](#fix-2)
-    - [Refactor](#refactor-1)
-  - [[v0.4.0] - 2019/07/10](#v040---20190710)
-    - [Added](#added-3)
-    - [Fixed](#fixed-5)
-  - [[v0.3.1] - 2019/12/16](#v031---20191216)
-    - [Fixed](#fixed-6)
-  - [[v0.3.0] - 2019/11/18](#v030---20191118)
-    - [Added](#added-4)
-  - [[v0.2.0] - 2019/11/15](#v020---20191115)
-    - [Added](#added-5)
-    - [Changed](#changed)
-  - [[v0.1.2] - 2019/10/14](#v012---20191014)
-    - [Fixed](#fixed-7)
-  - [[v0.1.1] - 2019/10/12](#v011---20191012)
-    - [Fixed](#fixed-8)
-  - [[v0.1.0] - 2019/10/11](#v010---20191011)
-    - [Added](#added-6)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-<!-- markdownlint-enable -->
-
-<!-- markdownlint-disable MD013 MD024 -->
-
+<!-- markdownlint-disable MD024 -->
 # Changelog
 
 All notable changes to this project will be documented in this file.
@@ -97,8 +41,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added a `Force` option to `gotagger.Config` and a corresponding `-force` flag to the CLI.
-  Setting this to `true` forces the creation of a tag, even if the HEAD is not a "release" commit.
+- Added a `Force` option to `gotagger.Config`,
+  and a corresponding `-force` flag to the CLI.
+  Setting this to `true` forces the creation of a tag,
+  even if the HEAD is not a "release" commit.
   [#11](https://github.com/sassoftware/gotagger/issues/11)
 - `gotagger` now takes a `-path` flag
   that restricts version calculation
@@ -197,7 +143,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   When finding the latest tag for a go module,
   `gotagger` was only considering tags that matched the major version of the module.
   This caused `gotagger` to essentially always calculate the version as `v1.0.0`.
-  The filtering was changed to only filter out tags whose major version are greater than the module version.
+  The filtering was changed
+  to only filter out tags
+  whose major version are greater than the module version.
   [#17](https://github.com/sassoftware/gotagger/issues/17)
 
 
