@@ -7,6 +7,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- stentor output starts -->
+## [v0.10.0] - 2025-07-28
+
+### Removed
+
+- Dropped support for Go 1.22
+  [#271](https://github.com/sassoftware/gotagger/issues/271)
+
+
+### Chores
+
+- Upgraded dependencies.
+
+  | Package | From | To |
+  | --- | --- | --- |
+  | [github.com/Masterminds/semver/v3](https://github.com/Masterminds/semver) | `3.3.0` | `3.4.0` |
+  | [github.com/go-git/go-git/v5](https://github.com/go-git/go-git) | `5.12.0` | `5.16.2` |
+  | [github.com/go-logr/logr](https://github.com/go-logr/logr) | `1.4.2` | `1.4.3` |
+  | [github.com/rs/zerolog](https://github.com/rs/zerolog) | `1.33.0` | `1.34.0` |
+  | [golang.org/x/mod](https://github.com/golang/mod) | `0.21.0` | `0.26.0` |
+  | [pgregory.net/rapid](https://github.com/flyingmutant/rapid) | `1.1.0` | `1.2.0` |
+
+  [#271](https://github.com/sassoftware/gotagger/issues/271)
+
+
+[v0.10.0]: https://github.com/sassoftware/gotagger/compare/v0.9.1...v0.10.0
+
+
+----
+
+
 ## [v0.9.1] - 2023-09-16
 
 ### Fixed
