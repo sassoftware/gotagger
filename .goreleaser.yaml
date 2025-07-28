@@ -1,4 +1,5 @@
 ---
+version: 2
 project_name: gotagger
 env:
   - CGO_ENABLED=0
@@ -20,15 +21,15 @@ builds:
       - windows
     ignore:
       - goos: darwin
-        goarch: 386
+        goarch: "386"
 archives:
   - format_overrides:
       - goos: windows
-        format: zip
+        formats: [zip]
 checksum:
   name_template: "checksums.txt"
 snapshot:
-  name_template: "{{.Env.VERSION}}-SNAPSHOT"
+  version_template: "{{.Env.VERSION}}-SNAPSHOT"
 changelog:
   sort: asc
   filters:
