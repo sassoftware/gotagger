@@ -1,6 +1,7 @@
 # commands
 GO          = go
 GOBUILD     = $(GO) build
+GOBIN       = $(CURDIR)/build/tools
 
 # variables
 BUILDDATE := $(shell date +%Y-%m-%d)
@@ -34,11 +35,12 @@ STENTORFLAGS =
 endif
 
 TARGET = build/$(GOOS)/gotagger
-TOOLREQS = tools/go.mod tools/go.sum
 
 # recipes
 .PHONY: all
 all: lint build test
+
+include .bingo/Variables.mk
 
 .PHONY: build
 build:
@@ -56,13 +58,14 @@ clean:
 
 .PHONY: distclean
 distclean: clean
+	$(RM) -r build/
 
 .PHONY: format
 format: LINTFLAGS += --fix
 format: lint
 
 .PHONY: lint
-lint: | $(GOLANGCI_LINT)
+lint: $(GOLANGCI_LINT)
 	$(GOLANGCI_LINT) run $(LINTFLAGS)
 
 .PHONY: report
@@ -94,5 +97,3 @@ help:
 	\n  report      generate test and coverage reports\
 	\n  test        run tests\
 	"
-
-include .bingo/Variables.mk
