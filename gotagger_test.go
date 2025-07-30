@@ -144,6 +144,18 @@ func TestGotagger_ModuleVersions_PreMajor(t *testing.T) {
 	}
 }
 
+func TestGotagger_ModuleVersion_Issue242(t *testing.T) {
+	// regression test for https://github.com/sassoftware/gotagger/issues/242
+	g, repo, path := newGotagger(t)
+
+	setupV2Modules(t, repo, path)
+	testutils.CommitFile(t, repo, path, "go.mod", "feat!: bump module to v3", []byte("module foo/v3\n"))
+
+	if got, err := g.ModuleVersions(); assert.NoError(t, err) {
+		assert.Equal(t, []string{"v3.0.0", "bar/v2.0.0"}, got)
+	}
+}
+
 func TestGotagger_versioning(t *testing.T) {
 	tests := []struct {
 		disabled bool

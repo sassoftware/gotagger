@@ -522,6 +522,12 @@ func (g *Gotagger) versionsModules(modules []module, commitModules []module) ([]
 			return nil, err
 		}
 
+		// empty hash means this is a newly incremented module
+		if hash == "" {
+			versions[i] = prefix + latest.String()
+			continue
+		}
+
 		// Find the commits between HEAD and latest
 		// that touched any path under the module.
 		// This list will need further filtering to deal with modules
