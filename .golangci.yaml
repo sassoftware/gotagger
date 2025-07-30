@@ -1,23 +1,35 @@
+version: "2"
 linters:
   enable:
     - copyloopvar
-    - errcheck
     - gocritic
-    - goimports
     - gosec
-    - gosimple
-    - govet
-    - ineffassign
     - revive
-    - staticcheck
-    - unused
-
+  settings:
+    revive:
+      rules:
+        - name: unused-parameter
+          disabled: true
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
-
-linters-settings:
-  revive:
-    rules:
-      - name: unused-parameter
-        disabled: true
+formatters:
+  enable:
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

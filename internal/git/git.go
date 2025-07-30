@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	errEmptyStart = errors.New("Must specify a start")
+	errEmptyStart = errors.New("must specify a start")
 )
 
 // Commit represents a commit in a git repository.

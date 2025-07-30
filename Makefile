@@ -1,12 +1,6 @@
 # commands
 GO          = go
 GOBUILD     = $(GO) build
-GOCOV       = $(TOOLBIN)/gocov
-GOCOVXML    = $(TOOLBIN)/gocov-xml
-GOINSTALL  := GOOS= GOARCH= $(GO) install
-LINTER      = $(TOOLBIN)/golangci-lint
-STENTOR     = $(TOOLBIN)/stentor
-TESTER      = $(TOOLBIN)/gotestsum
 
 # variables
 BUILDDATE := $(shell date +%Y-%m-%d)
@@ -17,7 +11,6 @@ $(if $(VERSION),,$(error failed to determine version))
 
 # directories
 REPORTDIR = build/reports
-TOOLBIN   = build/tools
 
 # flags
 BUILDFLAGS  = -v -ldflags '-X main.AppVersion=$(VERSION) -X main.Commit=$(COMMIT) -X main.BuildDate=$(BUILDDATE)'
@@ -63,47 +56,30 @@ clean:
 
 .PHONY: distclean
 distclean: clean
-	$(RM) -r $(TOOLBIN)/
 
 .PHONY: format
 format: LINTFLAGS += --fix
 format: lint
 
 .PHONY: lint
-lint: | $(LINTER)
-	$(LINTER) run $(LINTFLAGS)
+lint: | $(GOLANGCI_LINT)
+	$(GOLANGCI_LINT) run $(LINTFLAGS)
 
 .PHONY: report
 report: TESTFLAGS := $(REPORTFLAGS) $(TESTFLAGS)
-report: test | $(GOCOV) $(GOCOVXML)
-	$(GOCOV) convert $(COVEROUT) | $(GOCOVXML) > $(COVERXML)
+report: test | $(GOCOV) $(GOCOV_XML)
+	$(GOCOV) convert $(COVEROUT) | $(GOCOV_XML) > $(COVERXML)
 
 .PHONY: test tests
-test tests: | $(TESTER) $(REPORTDIR)
-	$(TESTER) $(TESTFLAGS) ./...
+test tests: | $(GOTESTSUM) $(REPORTDIR)
+	$(GOTESTSUM) $(TESTFLAGS) ./...
 
 .PHONY: version
 version:
 	@echo $(VERSION)
 
-$(REPORTDIR) $(TOOLBIN):
+$(REPORTDIR):
 	@mkdir -p $@
-
-tools/go.mod tools/go.sum: tools/tools.go
-	cd tools/ && go mod tidy
-
-define installtool
-$1: tools/go.mod tools/go.sum | $$(TOOLBIN)
-	cd tools/ && GOBIN=$$(CURDIR)/$$(TOOLBIN) $$(GOINSTALL) $2
-
-endef
-
-# tool targets
-$(eval $(call installtool,$(GOCOV),github.com/axw/gocov/gocov))
-$(eval $(call installtool,$(GOCOVXML),github.com/AlekSi/gocov-xml))
-$(eval $(call installtool,$(LINTER),github.com/golangci/golangci-lint/cmd/golangci-lint))
-$(eval $(call installtool,$(STENTOR),github.com/wfscheper/stentor/cmd/stentor))
-$(eval $(call installtool,$(TESTER),gotest.tools/gotestsum))
 
 .PHONY: help
 help:
@@ -114,7 +90,9 @@ help:
 	\n  clean       removes generated files\
 	\n  distclean   reset's workspace to original state\
 	\n  format      format source code\
-	\n  lint        run linters on source code\
+	\n  lint        run GOLANGCI_LINTs on source code\
 	\n  report      generate test and coverage reports\
 	\n  test        run tests\
 	"
+
+include .bingo/Variables.mk
