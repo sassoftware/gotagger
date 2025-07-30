@@ -415,7 +415,7 @@ func (g *Gotagger) parseCommits(cs []git.Commit, v *semver.Version) (vinc mapper
 		if c.Breaking {
 			// ignore breaking if this is a 0.x.y version and PreMajor is set
 			logger.Info("breaking change found")
-			if !(g.Config.PreMajor && v.Major() == 0) {
+			if !g.Config.PreMajor || v.Major() != 0 {
 				return mapper.IncrementMajor
 			}
 			logger.Info("ignoring due to pre-release version")

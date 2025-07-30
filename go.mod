@@ -2,8 +2,6 @@ module github.com/sassoftware/gotagger
 
 go 1.23.0
 
-toolchain go1.23.2
-
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/go-git/go-git/v5 v5.16.2

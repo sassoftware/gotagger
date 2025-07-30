@@ -191,7 +191,7 @@ func (g *GoTagger) Run() int {
 		logger.Info("reading config file", "path", g.configFile)
 		data, err := os.ReadFile(g.configFile)
 		// ignore a missing "default" config file
-		if !(g.configFile == defaultConfigFlag && errors.Is(err, os.ErrNotExist)) {
+		if g.configFile != defaultConfigFlag || !errors.Is(err, os.ErrNotExist) {
 			if err != nil {
 				g.err.Println("error:", err)
 				return genericErrorExitCode
@@ -211,9 +211,7 @@ func (g *GoTagger) Run() int {
 	r.Config.PushTag = g.pushTag
 	r.Config.RemoteName = g.remoteName
 
-	//nolint: gosimple // makes this consistent with other flags,
-	// and avoids hard to understand double negatives
-	if g.modules != defaultModulesFlag {
+	if !g.modules {
 		r.Config.IgnoreModules = !g.modules
 	}
 	if g.versionPrefix != defaultPrefixFlag {
