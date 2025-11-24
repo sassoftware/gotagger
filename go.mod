@@ -4,7 +4,7 @@ go 1.24.0
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
-	github.com/go-git/go-git/v5 v5.16.3
+	github.com/go-git/go-git/v5 v5.16.4
 	github.com/go-logr/logr v1.4.3
 	github.com/go-logr/zerologr v1.2.3
 	github.com/rs/zerolog v1.34.0
