@@ -70,8 +70,8 @@ lint: $(GOLANGCI_LINT)
 
 .PHONY: report
 report: TESTFLAGS := $(REPORTFLAGS) $(TESTFLAGS)
-report: test | $(GOCOV) $(GOCOV_XML)
-	$(GOCOV) convert $(COVEROUT) | $(GOCOV_XML) > $(COVERXML)
+report: test | $(GOCOVER_COBERTURA)
+	$(GOCOVER_COBERTURA) <$(COVEROUT) >$(COVERXML)
 
 .PHONY: test tests
 test tests: | $(GOTESTSUM) $(REPORTDIR)
