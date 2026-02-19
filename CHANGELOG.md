@@ -380,19 +380,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Use `--merged` argument to `git tag` so that we only generate tags that point to
-  parents of HEAD.
+- Use `--merged` argument to `git tag`
+  so that we only generate tags
+  that point to parents of HEAD.
 
 ## [v0.1.1] - 2019/10/12
 
 ### Fixed
 
 - Always create annotated tags, otherwise we can't find our own tags.
-- Call `git log` with the `--decorate=full` option, so that tags are properly prefixed
-  with `refs/tags/`
-- Remove unnecessary quotes from `git tag` format. These were being included in the
-  formatted string.
-- Address a bug in the cli where we tried to do a release when HEAD is already tagged.
+- Call `git log` with the `--decorate=full` option,
+  so that tags are properly prefixed with `refs/tags/`.
+- Remove unnecessary quotes from `git tag` format.
+  These were being included in the formatted string.
+- Address a bug in the cli where we tried to do a release
+  when HEAD is already tagged.
 
 ## [v0.1.0] - 2019/10/11
 
