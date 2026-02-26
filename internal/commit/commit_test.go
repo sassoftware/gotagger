@@ -298,6 +298,27 @@ func Test_parseMessageBody(t *testing.T) {
 	})
 }
 
+func Test_Parse_multipleFooters(t *testing.T) {
+	input := `release: multiple modules
+
+Modules: foo
+Modules: foo/bar
+
+---------
+
+Co-authored-by: github-user <github-user@email>`
+
+	c := Parse(input)
+
+	assert.Equal(t, "release", c.Type)
+	assert.Equal(t, "---------", c.Body)
+	assert.Equal(t, 3, len(c.Footers))
+	assert.Equal(t, Footer{Title: "Modules", Text: "foo"}, c.Footers[0])
+	assert.Equal(t, Footer{Title: "Modules", Text: "foo/bar\n"}, c.Footers[1])
+	assert.Equal(t, Footer{Title: "Co-authored-by", Text: "github-user <github-user@email>"}, c.Footers[2])
+	assert.False(t, c.Breaking)
+}
+
 func Test_parseMessageBody_multipleFooters(t *testing.T) {
 	input := `
 Modules: foo
