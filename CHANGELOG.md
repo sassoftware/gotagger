@@ -413,4 +413,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [v0.1.2]: https://github.com/sassoftware/gotagger/compare/v0.1.1...v0.1.2
 [v0.1.1]: https://github.com/sassoftware/gotagger/compare/v0.1.0...v0.1.1
 [v0.1.0]: https://github.com/sassoftware/gotagger/compare/e3ef062...v0.1.0
-
