@@ -203,7 +203,12 @@ func TestParse_footer(t *testing.T) {
 						return false
 					})),
 			func(s []string) string { return strings.Join(s, "\n") },
-		).Draw(t, "bFooterText")
+		).Filter(func(s string) bool {
+			// Per Git trailer spec, multi-line values must have continuation lines
+			// starting with whitespace. Since the generated text doesn't add whitespace,
+			// we filter out any text containing newlines.
+			return !strings.Contains(s, "\n")
+		}).Draw(t, "bFooterText")
 		footerTitle := rapid.StringMatching(`^([[:alnum:]][-\w ]*)?`).Draw(t, "footerTitle")
 		footerText := rapid.Map(
 			rapid.SliceOf(
@@ -217,7 +222,12 @@ func TestParse_footer(t *testing.T) {
 						return false
 					})),
 			func(s []string) string { return strings.Join(s, "\n") },
-		).Draw(t, "footerText")
+		).Filter(func(s string) bool {
+			// Per Git trailer spec, multi-line values must have continuation lines
+			// starting with whitespace. Since the generated text doesn't add whitespace,
+			// we filter out any text containing newlines.
+			return !strings.Contains(s, "\n")
+		}).Draw(t, "footerText")
 		input := header + "\n\n" + body + "\n\n" + bFooterTitle + ": " + bFooterText
 		if footerTitle != "" {
 			input += "\n" + footerTitle + ": " + footerText
@@ -267,7 +277,11 @@ func Test_parseMessageBody(t *testing.T) {
 		footerTitle := rapid.StringMatching(
 			`^[bB][rR][eE][aA][kK][iI][nN][gG]-[cC][hH][aA][nN][gG][eE]`,
 		).Draw(t, "footerTitle")
-		footerText := rapid.String().Draw(t, "footerText")
+		footerText := rapid.String().Filter(func(s string) bool {
+			// Per Git trailer spec, multi-line values must have continuation lines
+			// starting with whitespace. Filter out newlines for simplicity.
+			return !strings.Contains(s, "\n")
+		}).Draw(t, "footerText")
 		inputBody := "Some text"
 		input := inputBody + "\n\n" + footerTitle + ": " + footerText
 
@@ -282,4 +296,65 @@ func Test_parseMessageBody(t *testing.T) {
 			t.Errorf("wanted breaking change")
 		}
 	})
+}
+
+func Test_Parse_multipleFooters(t *testing.T) {
+	input := `release: multiple modules
+
+Modules: foo
+Modules: foo/bar
+
+---------
+
+Co-authored-by: github-user <github-user@email>`
+
+	c := Parse(input)
+
+	assert.Equal(t, "release", c.Type)
+	assert.Equal(t, "---------", c.Body)
+	assert.Equal(t, 3, len(c.Footers))
+	assert.Equal(t, Footer{Title: "Modules", Text: "foo"}, c.Footers[0])
+	assert.Equal(t, Footer{Title: "Modules", Text: "foo/bar\n"}, c.Footers[1])
+	assert.Equal(t, Footer{Title: "Co-authored-by", Text: "github-user <github-user@email>"}, c.Footers[2])
+	assert.False(t, c.Breaking)
+}
+
+func Test_parseMessageBody_multipleFooters(t *testing.T) {
+	input := `
+Modules: foo
+Modules: foo/bar
+
+Co-authored-by: github-user <github-user@email>`
+
+	body, footers, breaking := parseMessageBody(strings.Split(input, "\n"))
+
+	// Expected behavior:
+	// - body should be empty (no body text, just footers)
+	// - should have 3 footers: two "Modules" and one "Co-authored-by"
+	// - the Modules footers should NOT include the Co-authored-by line
+	// - the second Modules footer includes the empty line that follows it
+	assert.Equal(t, "", body)
+	assert.Equal(t, 3, len(footers))
+	assert.Equal(t, Footer{Title: "Modules", Text: "foo"}, footers[0])
+	assert.Equal(t, Footer{Title: "Modules", Text: "foo/bar\n"}, footers[1])
+	assert.Equal(t, Footer{Title: "Co-authored-by", Text: "github-user <github-user@email>"}, footers[2])
+	assert.False(t, breaking)
+}
+
+func Test_parseMessageBody_multilineFooterWithWhitespace(t *testing.T) {
+	input := `
+some body text
+
+Footer-Title: first line
+ second line
+  third line
+Another-Footer: value`
+
+	body, footers, breaking := parseMessageBody(strings.Split(input, "\n"))
+
+	assert.Equal(t, "some body text", body)
+	assert.Equal(t, 2, len(footers))
+	assert.Equal(t, Footer{Title: "Footer-Title", Text: "first line\n second line\n  third line"}, footers[0])
+	assert.Equal(t, Footer{Title: "Another-Footer", Text: "value"}, footers[1])
+	assert.False(t, breaking)
 }

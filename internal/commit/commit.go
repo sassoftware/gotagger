@@ -132,7 +132,19 @@ func parseMessageBody(lines []string) (body string, footers []Footer, breaking b
 		}
 
 		if inFooter {
-			f.Text += "\n" + line
+			// Per Git trailer spec (RFC 822 folding), continuation lines
+			// must start with at least one whitespace character.
+			// Empty lines are also treated as continuations.
+			if len(line) == 0 || line[0] == ' ' || line[0] == '\t' {
+				f.Text += "\n" + line
+			} else {
+				// Non-empty line without leading whitespace exits the footer section.
+				// Add the current footer and switch back to body mode.
+				footers = append(footers, f)
+				f = Footer{}
+				inFooter = false
+				body += "\n" + line
+			}
 		} else {
 			body += "\n" + line
 		}
