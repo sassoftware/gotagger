@@ -6,6 +6,8 @@ package gotagger
 import (
 	"errors"
 	"fmt"
+	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -200,7 +202,7 @@ func (g *Gotagger) findAllModules(include []string) (modules []module, err error
 	}
 
 	// walk root and find all modules
-	err = filepath.Walk(g.repo.Path, func(pth string, info os.FileInfo, err error) error {
+	err = filepath.WalkDir(g.repo.Path, func(pth string, info fs.DirEntry, err error) error {
 		// bail on errors
 		if err != nil {
 			return err
@@ -228,7 +230,13 @@ func (g *Gotagger) findAllModules(include []string) (modules []module, err error
 
 		if strings.HasSuffix(relPath, filepathSep+goMod) || relPath == goMod {
 			logger.Info("found go module")
-			data, err := os.ReadFile(pth)
+			fh, err := os.OpenInRoot(g.repo.Path, relPath)
+			if err != nil {
+				return err
+			}
+			defer fh.Close()
+
+			data, err := io.ReadAll(fh)
 			if err != nil {
 				return err
 			}

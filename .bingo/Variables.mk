@@ -29,11 +29,11 @@ $(GOCOVER_COBERTURA): $(BINGO_DIR)/gocover-cobertura.mod
 	@echo "(re)installing $(GOBIN)/gocover-cobertura-v1.4.0"
 	@cd $(BINGO_DIR) && GOWORK=off GOOS=$(GOHOSTOS) GOARCH=$(GOHOSTARCH) GOARM=$(GOHOSTARM) $(GO) build -mod=mod -modfile=gocover-cobertura.mod -o=$(GOBIN)/gocover-cobertura-v1.4.0 "github.com/boumenot/gocover-cobertura"
 
-GOLANGCI_LINT := $(GOBIN)/golangci-lint-v2.3.0
+GOLANGCI_LINT := $(GOBIN)/golangci-lint-v2.11.4
 $(GOLANGCI_LINT): $(BINGO_DIR)/golangci-lint.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
-	@echo "(re)installing $(GOBIN)/golangci-lint-v2.3.0"
-	@cd $(BINGO_DIR) && GOWORK=off GOOS=$(GOHOSTOS) GOARCH=$(GOHOSTARCH) GOARM=$(GOHOSTARM) $(GO) build -mod=mod -modfile=golangci-lint.mod -o=$(GOBIN)/golangci-lint-v2.3.0 "github.com/golangci/golangci-lint/v2/cmd/golangci-lint"
+	@echo "(re)installing $(GOBIN)/golangci-lint-v2.11.4"
+	@cd $(BINGO_DIR) && GOWORK=off GOOS=$(GOHOSTOS) GOARCH=$(GOHOSTARCH) GOARM=$(GOHOSTARM) $(GO) build -mod=mod -modfile=golangci-lint.mod -o=$(GOBIN)/golangci-lint-v2.11.4 "github.com/golangci/golangci-lint/v2/cmd/golangci-lint"
 
 GORELEASER := $(GOBIN)/goreleaser-v1.26.2
 $(GORELEASER): $(BINGO_DIR)/goreleaser.mod
